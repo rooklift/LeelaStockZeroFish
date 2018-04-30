@@ -211,7 +211,7 @@ def handle_challenge(challenge):
 #		"perf": {"icon": "#", "name": "Rapid"}
 #	}
 
-	log(f"Incoming challenge from {challenge['challenger']['name']}")
+	log(f"Incoming challenge from {challenge['challenger']['name']} -- {challenge['timeControl']['show']} (rated: {challenge['rated']})")
 
 	accepting = True
 
