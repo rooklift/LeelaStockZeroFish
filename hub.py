@@ -3,8 +3,6 @@ import requests
 
 # ------------------------------------------------------------------------
 
-ONLY_PLAY_OWNER = False				# For testing
-
 stockfish_cmd = "./stockfish_9_x64.exe"
 leela_cmd = "./lczero.exe -w network"
 
@@ -13,7 +11,7 @@ leela_cmd = "./lczero.exe -w network"
 try:
 	with open("account.json") as account_file:
 		account = json.load(account_file)
-		for prop in ["my_name", "owner", "token"]:
+		for prop in ["account", "token"]:
 			if prop not in account:
 				print(f"account.json did not have needed '{prop}' property")
 				sys.exit()
@@ -226,16 +224,6 @@ def handle_challenge(challenge):
 		if active_game:
 			accepting = False
 
-	# Always play owner...
-
-	if challenge["challenger"]["name"].lower() == account["owner"].lower():
-		accept(challenge["id"])
-		return
-
-	if ONLY_PLAY_OWNER:
-		decline(challenge["id"])
-		return
-
 	# Variants...
 
 	if challenge["variant"]["key"] != "standard":
@@ -353,9 +341,9 @@ class Game():
 
 				log(j)
 
-				if j["white"]["name"].lower() == account["my_name"].lower():
+				if j["white"]["name"].lower() == account["account"].lower():
 					self.colour = "white"
-				elif j["black"]["name"].lower() == account["my_name"].lower():
+				elif j["black"]["name"].lower() == account["account"].lower():
 					self.colour = "black"
 
 				self.handle_state(j["state"])
