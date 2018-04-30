@@ -380,8 +380,8 @@ class Game():
 
 		log("-----------------")
 
-		wtime_minus_1s = max(1, state["wtime"] - 1000)
-		btime_minus_1s = max(1, state["btime"] - 1000)
+		wtime_minus_1s = max(1, state["wtime"] - 1100)
+		btime_minus_1s = max(1, state["btime"] - 1100)
 
 		leela.send(f"position {self.gameFull['initialFen']} moves {state['moves']}")
 		leela.send(f"go wtime {wtime_minus_1s} btime {btime_minus_1s} winc {state['winc']} binc {state['binc']}")
