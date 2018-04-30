@@ -486,25 +486,21 @@ def logger_thread(filename, q):
 
 	while 1:
 
-		while 1:
+		try:
 
-			try:
+			msg = q.get(block = False)
 
-				msg = q.get(block = False)
+			msg = str(msg).strip()
+			logfile.write(msg + "\n")
+			print(msg)
 
-				msg = str(msg).strip()
-				logfile.write(msg + "\n")
-				print(msg)
+		except queue.Empty:
 
-			except queue.Empty:
+			if time.monotonic() - flush_time > 1:
+				logfile.flush()
+				flush_time = time.monotonic()
 
-				break
-
-		if time.monotonic() - flush_time > 1:
-
-			logfile.flush()
-
-		time.sleep(0.1)
+			time.sleep(0.1)		# Essential since we're not blocking on the read.
 
 # ------------------------------------------------------------------------
 
