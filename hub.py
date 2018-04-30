@@ -8,13 +8,19 @@ ONLY_PLAY_OWNER = True				# For testing
 # ------------------------------------------------------------------------
 
 try:
-	account = json.load(open("account.json"))
-	for prop in ["my_name", "owner", "token"]:
-		if prop not in account:
-			print(f"account.json did not have needed '{prop}' property")
-			sys.exit()
-except:
+	with open("account.json") as account_file:
+		account = json.load(account_file)
+		for prop in ["my_name", "owner", "token"]:
+			if prop not in account:
+				print(f"account.json did not have needed '{prop}' property")
+				sys.exit()
+
+except FileNotFoundError:
 	print("Couldn't load account.json")
+	sys.exit()
+
+except json.decoder.JSONDecodeError:
+	print("account.json seems to be illegal JSON")
 	sys.exit()
 
 headers = {"Authorization": f"Bearer {account['token']}"}
