@@ -3,30 +3,25 @@ import requests
 
 # ------------------------------------------------------------------------
 
-stockfish_cmd = "./stockfish_9_x64.exe"
-leela_cmd = "./lczero.exe -w network"
-
-# ------------------------------------------------------------------------
-
 try:
-	with open("account.json") as account_file:
-		account = json.load(account_file)
-		for prop in ["account", "token"]:
-			if prop not in account:
-				print(f"account.json did not have needed '{prop}' property")
+	with open("config.json") as config_file:
+		config = json.load(config_file)
+		for prop in ["account", "token", "stockfish_command", "leela_command"]:
+			if prop not in config:
+				print(f"config.json did not have needed '{prop}' property")
 				sys.exit()
 
 except FileNotFoundError:
-	print("Couldn't load account.json")
+	print("Couldn't load config.json")
 	sys.exit()
 
 except json.decoder.JSONDecodeError:
-	print("account.json seems to be illegal JSON")
+	print("config.json seems to be illegal JSON")
 	sys.exit()
 
 # ------------------------------------------------------------------------
 
-headers = {"Authorization": f"Bearer {account['token']}"}
+headers = {"Authorization": f"Bearer {config['token']}"}
 
 main_log = queue.Queue()
 
@@ -171,8 +166,8 @@ def main():
 	threading.Thread(target = logger_thread, args = ("log.txt", main_log), daemon = True).start()
 	log(f"-- STARTUP -- at {time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())} " + "-" * 40)
 
-	stockfish = Engine(stockfish_cmd, "SF")
-	leela = Engine(leela_cmd, "LZ")
+	stockfish = Engine(config["stockfish_command"], "SF")
+	leela = Engine(config["leela_command"], "LZ")
 
 	stockfish.send("uci")
 	leela.send("uci")
@@ -341,9 +336,9 @@ class Game():
 
 				log(j)
 
-				if j["white"]["name"].lower() == account["account"].lower():
+				if j["white"]["name"].lower() == config["account"].lower():
 					self.colour = "white"
-				elif j["black"]["name"].lower() == account["account"].lower():
+				elif j["black"]["name"].lower() == config["account"].lower():
 					self.colour = "black"
 
 				self.handle_state(j["state"])

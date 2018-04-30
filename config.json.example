@@ -1,0 +1,6 @@
+{
+	"account":				"Bot_Account_Here",
+	"token":				"API_Token_Here",
+	"stockfish_command":	"./stockfish_9_x64.exe",
+	"leela_command":		"./lczero.exe -w network"
+}
