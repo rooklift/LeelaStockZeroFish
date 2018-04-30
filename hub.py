@@ -193,7 +193,7 @@ def main():
 			if j["type"] == "challenge":
 				handle_challenge(j["challenge"])
 
-			if j["type"] in ["gameStart", "startGame"]:		# Docs are unclear which.
+			if j["type"] == "gameStart":
 				start_game(j["game"]["id"])
 
 	log("ERROR: Main event stream closed.")
