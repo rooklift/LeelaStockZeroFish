@@ -445,11 +445,15 @@ class Game():
 
 def stdout_to_queue(process, q):
 
+	have_warned_eof = False
+
 	while 1:
 		z = process.stdout.readline().decode("utf-8")
 
 		if z == "":
-			log("WARNING: empty string (EOF) received.")
+			if not have_warned_eof:
+				log("WARNING: empty string (EOF) received.")
+				have_warned_eof = True
 		elif z.strip() == "":
 			log("WARNING: blank line received.")
 		else:
