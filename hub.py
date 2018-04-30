@@ -3,7 +3,7 @@ import requests
 
 # ------------------------------------------------------------------------
 
-ONLY_PLAY_OWNER = True				# For testing
+ONLY_PLAY_OWNER = False				# For testing
 
 stockfish_cmd = "./stockfish_9_x64.exe"
 leela_cmd = "./lczero.exe -w network"
