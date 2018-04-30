@@ -260,14 +260,20 @@ def decline(challengeId):
 	log(f"Declining challenge {challengeId}.")
 	r = requests.post(f"https://lichess.org/api/challenge/{challengeId}/decline", headers = headers)
 	if r.status_code != 200:
-		log(r.json())
+		try:
+			log(r.json())
+		except:
+			log(f"decline returned {r.status_code}")
 
 def accept(challengeId):
 
 	log(f"Accepting challenge {challengeId}.")
 	r = requests.post(f"https://lichess.org/api/challenge/{challengeId}/accept", headers = headers)
 	if r.status_code != 200:
-		log(r.json())
+		try:
+			log(r.json())
+		except:
+			log(f"accept returned {r.status_code}")
 
 def start_game(gameId):
 
@@ -411,7 +417,10 @@ class Game():
 
 		requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/resign", headers = headers)
 		if r.status_code != 200:
-			log(r.json())
+			try:
+				log(r.json())
+			except:
+				log(f"resign returned {r.status_code}")
 
 		self.finish()
 
@@ -422,7 +431,10 @@ class Game():
 
 		r = requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/abort", headers = headers)
 		if r.status_code != 200:
-			log(r.json())
+			try:
+				log(r.json())
+			except:
+				log(f"abort returned {r.status_code}")
 
 		self.finish()
 
@@ -432,7 +444,10 @@ class Game():
 		r = requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/move/{move}", headers = headers)
 		if r.status_code != 200:
 			log(f"ERROR: move failed in game {self.gameId}")
-			log(r.json())
+			try:
+				log(r.json())
+			except:
+				log(f"move returned {r.status_code}")
 
 
 	def finish(self):
