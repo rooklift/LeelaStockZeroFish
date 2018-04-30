@@ -53,7 +53,7 @@ class Engine():
 										)
 
 		self.stdout_queue = queue.Queue()
-		threading.Thread(target = stdout_to_queue, args = (self.process, self.stdout_queue), daemon = True).start()
+		threading.Thread(target = stdout_to_queue, args = (self.process, self.stdout_queue, self.shortname), daemon = True).start()
 
 	def send(self, msg):
 
@@ -441,19 +441,16 @@ class Game():
 
 # ------------------------------------------------------------------------
 
-def stdout_to_queue(process, q):
-
-	have_warned_eof = False
+def stdout_to_queue(process, q, shortname):
 
 	while 1:
 		z = process.stdout.readline().decode("utf-8")
 
 		if z == "":
-			if not have_warned_eof:
-				log("WARNING: empty string (EOF) received.")
-				have_warned_eof = True
+			log(f"WARNING: got EOF while reading from {shortname}.")
+			return
 		elif z.strip() == "":
-			log("WARNING: blank line received.")
+			pass
 		else:
 			q.put(z.strip())
 
