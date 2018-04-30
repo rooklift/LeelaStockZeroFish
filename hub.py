@@ -5,6 +5,9 @@ import requests
 
 ONLY_PLAY_OWNER = True				# For testing
 
+stockfish_cmd = "./stockfish_9_x64.exe"
+leela_cmd = "./lczero.exe -w network"
+
 # ------------------------------------------------------------------------
 
 try:
@@ -23,15 +26,11 @@ except json.decoder.JSONDecodeError:
 	print("account.json seems to be illegal JSON")
 	sys.exit()
 
-headers = {"Authorization": f"Bearer {account['token']}"}
-
-logfile = open("log.txt", "a")
-logfile_MUTEX = threading.Lock()
-
 # ------------------------------------------------------------------------
 
-stockfish_cmd = "./stockfish_9_x64.exe"
-leela_cmd = "./lczero.exe -w network"
+headers = {"Authorization": f"Bearer {account['token']}"}
+
+log_queue = queue.Queue()
 
 active_game = None
 active_game_MUTEX = threading.Lock()
@@ -54,7 +53,7 @@ class Engine():
 										)
 
 		self.stdout_queue = queue.Queue()
-		threading.Thread(target = stdout_to_queue, args = (self.process, self.stdout_queue)).start()
+		threading.Thread(target = stdout_to_queue, args = (self.process, self.stdout_queue), daemon = True).start()
 
 	def send(self, msg):
 
@@ -162,6 +161,8 @@ def main():
 
 	global stockfish
 	global leela
+
+	threading.Thread(target = logger_thread, daemon = True).start()
 
 	stockfish = Engine(stockfish_cmd, "SF")
 	leela = Engine(leela_cmd, "LZ")
@@ -303,10 +304,7 @@ def sign(num):
 
 
 def log(msg):
-	msg = str(msg).strip()
-	with logfile_MUTEX:
-		logfile.write(msg + "\n")
-	print(msg)
+	log_queue.put(msg)
 
 # ------------------------------------------------------------------------
 
@@ -456,6 +454,34 @@ def stdout_to_queue(process, q):
 			log("WARNING: blank line received.")
 		else:
 			q.put(z.strip())
+
+def logger_thread():
+
+	logfile = open("log.txt", "a")
+
+	flush_time = time.monotonic()
+
+	while 1:
+
+		while 1:
+
+			try:
+
+				msg = log_queue.get(block = False)
+
+				msg = str(msg).strip()
+				logfile.write(msg + "\n")
+				print(msg)
+
+			except queue.Empty:
+
+				break
+
+		if time.monotonic() - flush_time > 1:
+
+			logfile.flush()
+
+		time.sleep(0.1)
 
 # ------------------------------------------------------------------------
 
