@@ -439,8 +439,6 @@ class Game():
 			else:
 				log("active_game not touched")
 
-		logfile.flush()
-
 # ------------------------------------------------------------------------
 
 def stdout_to_queue(process, q):
