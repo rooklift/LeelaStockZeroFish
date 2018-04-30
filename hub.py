@@ -171,6 +171,7 @@ def main():
 	global leela
 
 	threading.Thread(target = logger_thread, args = ("log.txt", main_log), daemon = True).start()
+	log(f"-- STARTUP -- at {time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())} " + "-" * 40)
 
 	stockfish = Engine(stockfish_cmd, "SF")
 	leela = Engine(leela_cmd, "LZ")
