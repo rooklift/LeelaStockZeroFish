@@ -30,7 +30,7 @@ except json.decoder.JSONDecodeError:
 
 headers = {"Authorization": f"Bearer {account['token']}"}
 
-log_queue = queue.Queue()
+main_log = queue.Queue()
 
 active_game = None
 active_game_MUTEX = threading.Lock()
@@ -52,8 +52,16 @@ class Engine():
 										stderr = subprocess.PIPE,
 										)
 
+		# Make a thread that puts this engine's stdout onto a queue which we read when needed...
+		# I forget why I bothered with this now. Seems redundant. I was probably worried about
+		# the pipe filling up.
+
 		self.stdout_queue = queue.Queue()
 		threading.Thread(target = stdout_to_queue, args = (self.process, self.stdout_queue, self.shortname), daemon = True).start()
+
+		# Make a thread that puts this engine's stderr into a log...
+
+		threading.Thread(target = stderr_to_log, args = (self.process, f"{self.shortname}_stderr.txt"), daemon = True).start()
 
 	def send(self, msg):
 
@@ -162,7 +170,7 @@ def main():
 	global stockfish
 	global leela
 
-	threading.Thread(target = logger_thread, daemon = True).start()
+	threading.Thread(target = logger_thread, args = ("log.txt", main_log), daemon = True).start()
 
 	stockfish = Engine(stockfish_cmd, "SF")
 	leela = Engine(leela_cmd, "LZ")
@@ -304,7 +312,7 @@ def sign(num):
 
 
 def log(msg):
-	log_queue.put(msg)
+	main_log.put(msg)
 
 # ------------------------------------------------------------------------
 
@@ -454,9 +462,24 @@ def stdout_to_queue(process, q, shortname):
 		else:
 			q.put(z.strip())
 
-def logger_thread():
 
-	logfile = open("log.txt", "a")
+def stderr_to_log(process, filename):
+
+	logfile = open(filename, "a")
+
+	while 1:
+		z = process.stderr.readline().decode("utf-8")
+
+		if z == "":
+			logfile.write("EOF" + "\n")
+			return
+		else:
+			logfile.write(z)
+
+
+def logger_thread(filename, q):
+
+	logfile = open(filename, "a")
 
 	flush_time = time.monotonic()
 
@@ -466,7 +489,7 @@ def logger_thread():
 
 			try:
 
-				msg = log_queue.get(block = False)
+				msg = q.get(block = False)
 
 				msg = str(msg).strip()
 				logfile.write(msg + "\n")
