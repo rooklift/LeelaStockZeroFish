@@ -111,7 +111,7 @@ class Engine():
 						if mate_in > 0:
 							test_score = 100000 - (mate_in * 1000)
 						else:
-							test_score = -100000 + (mate_in * 1000)
+							test_score = -100000 + (-mate_in * 1000)
 
 					except ValueError:
 						pass
