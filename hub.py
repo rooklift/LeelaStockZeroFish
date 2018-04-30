@@ -53,6 +53,8 @@ class Engine():
 		threading.Thread(target = stdout_to_queue, args = (self.process, self.stdout_queue, self.shortname), daemon = True).start()
 
 		# Make a thread that puts this engine's stderr into a log...
+		# I think it's necessary to do SOMETHING with stderr (so it doesn't build up and hang the engine).
+		# As an alternative, we could send it to devnull.
 
 		threading.Thread(target = stderr_to_log, args = (self.process, f"{self.shortname}_stderr.txt"), daemon = True).start()
 
@@ -197,16 +199,16 @@ def handle_challenge(challenge):
 	global active_game
 	global active_game_MUTEX
 
-#	"challenge":{
-#		"id":"7pGLxJ4F",
-#		"status":"created",
-#		"rated":true,
-#		"color":"random",
-#		"variant":{"key":"standard","name":"Standard","short":"Std"},
-#		"timeControl":{"type":"clock","limit":300,"increment":25,"show":"5+25"},
-#		"challenger":{"id":"lovlas","name":"Lovlas","title":"IM","rating":2506,"patron":true,"online":true,"lag":24},
-#		"destUser":{"id":"thibot","name":"thibot","title":null,"rating":1500,"provisional":true,"online":true,"lag":45},
-#		"perf":{"icon":"#","name":"Rapid"}
+#	"challenge": {
+#		"id": "7pGLxJ4F",
+#		"status": "created",
+#		"rated": true,
+#		"color": "random",
+#		"variant": {"key": "standard", "name": "Standard", "short": "Std"},
+#		"timeControl": {"type": "clock", "limit":300, "increment":25, "show": "5+25"},
+#		"challenger": {"id": "lovlas", "name": "Lovlas", "title": "IM", "rating": 2506, "patron": true, "online": true, "lag": 24},
+#		"destUser": {"id": "thibot", "name": "thibot", "title": null, "rating": 1500, "provisional": true, "online": true, "lag": 45},
+#		"perf": {"icon": "#", "name": "Rapid"}
 #	}
 
 	log(f"Incoming challenge from {challenge['challenger']['name']}")
