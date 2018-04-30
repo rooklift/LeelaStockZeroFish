@@ -1,4 +1,4 @@
-import json, subprocess, threading
+import json, queue, subprocess, sys, threading, time
 import requests
 
 # ------------------------------------------------------------------------
@@ -7,14 +7,20 @@ ONLY_PLAY_OWNER = True				# For testing
 
 # ------------------------------------------------------------------------
 
-my_name = "BOT_ACCOUNT_HERE"		# Must match the account - used to work out own colour in games
-owner = "OWNER_ACCOUNT_HERE"		# Used for testing.
+try:
+	account = json.load(open("account.json"))
+	for prop in ["my_name", "owner", "token"]:
+		if prop not in account:
+			print(f"account.json did not have needed '{prop}' property")
+			sys.exit()
+except:
+	print("Couldn't load account.json")
+	sys.exit()
 
-api_token = "REDACTED"
-
-headers = {"Authorization": "Bearer " + api_token}
+headers = {"Authorization": f"Bearer {account['token']}"}
 
 logfile = open("log.txt", "a")
+logfile_MUTEX = threading.Lock()
 
 # ------------------------------------------------------------------------
 
@@ -41,6 +47,9 @@ class Engine():
 										stderr = subprocess.PIPE,
 										)
 
+		self.stdout_queue = queue.Queue()
+		threading.Thread(target = stdout_to_queue, args = (self.process, self.stdout_queue)).start()
+
 	def send(self, msg):
 
 		msg = msg.strip()
@@ -54,7 +63,7 @@ class Engine():
 		# Assumes the go command has already been sent
 
 		while 1:
-			z = self.process.stdout.readline().decode("utf-8").strip()
+			z = self.stdout_queue.get()
 			log(self.shortname + " :: " + z)
 
 			if "bestmove" in z:
@@ -72,7 +81,7 @@ class Engine():
 		best_score = None
 
 		while 1:
-			z = self.process.stdout.readline().decode("utf-8").strip()
+			z = self.stdout_queue.get()
 			log(self.shortname + " :: " + z)
 
 			if f"pv {test_move}" in z:		# Sketchy because UCI allows random whitespace
@@ -203,7 +212,7 @@ def handle_challenge(challenge):
 
 	# Always play owner...
 
-	if challenge["challenger"]["name"].lower() == owner.lower():
+	if challenge["challenger"]["name"].lower() == account["owner"].lower():
 		accept(challenge["id"])
 		return
 
@@ -289,7 +298,8 @@ def sign(num):
 
 def log(msg):
 	msg = str(msg).strip()
-	logfile.write(msg + "\n")
+	with logfile_MUTEX:
+		logfile.write(msg + "\n")
 	print(msg)
 
 # ------------------------------------------------------------------------
@@ -324,9 +334,9 @@ class Game():
 
 				log(j)
 
-				if j["white"]["name"].lower() == my_name.lower():
+				if j["white"]["name"].lower() == account["my_name"].lower():
 					self.colour = "white"
-				elif j["black"]["name"].lower() == my_name.lower():
+				elif j["black"]["name"].lower() == account["my_name"].lower():
 					self.colour = "black"
 
 				self.handle_state(j["state"])
@@ -336,6 +346,7 @@ class Game():
 				self.handle_state(j)
 
 		log("Game stream closed.")
+		log("-----------------------------------------------------------------")
 		self.finish()
 
 
@@ -362,6 +373,8 @@ class Game():
 
 		global stockfish
 		global leela
+
+		log("-----------------")
 
 		wtime_minus_1s = max(1, state["wtime"] - 1000)
 		btime_minus_1s = max(1, state["btime"] - 1000)
@@ -418,10 +431,25 @@ class Game():
 		with active_game_MUTEX:
 			if active_game == self:
 				active_game = None
+				log("active_game set to None")
+			else:
+				log("active_game not touched")
 
 		logfile.flush()
 
+# ------------------------------------------------------------------------
 
+def stdout_to_queue(process, q):
+
+	while 1:
+		z = process.stdout.readline().decode("utf-8")
+
+		if z == "":
+			log("WARNING: empty string (EOF) received.")
+		elif z.strip() == "":
+			log("WARNING: blank line received.")
+		else:
+			q.put(z.strip())
 
 # ------------------------------------------------------------------------
 
