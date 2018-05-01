@@ -72,11 +72,10 @@ class Engine():
 
 		while 1:
 			z = self.stdout_queue.get()
-			log(self.shortname + " :: " + z)
+			# log(self.shortname + " :: " + z)
 
 			if "bestmove" in z:
 				tokens = z.split()
-				log(f"RETURNING {tokens[1]}")
 				return tokens[1]
 
 	def validate(self, test_move):
@@ -90,7 +89,7 @@ class Engine():
 
 		while 1:
 			z = self.stdout_queue.get()
-			log(self.shortname + " :: " + z)
+			# log(self.shortname + " :: " + z)
 
 			if f"pv {test_move}" in z:		# Sketchy because UCI allows random whitespace
 
