@@ -3,33 +3,13 @@ import requests
 
 # ------------------------------------------------------------------------
 
-try:
-	with open("config.json") as config_file:
-		config = json.load(config_file)
-		for prop in ["account", "token", "stockfish_command", "leela_command"]:
-			if prop not in config:
-				print(f"config.json did not have needed '{prop}' property")
-				sys.exit()
-
-except FileNotFoundError:
-	print("Couldn't load config.json")
-	sys.exit()
-
-except json.decoder.JSONDecodeError:
-	print("config.json seems to be illegal JSON")
-	sys.exit()
-
-# ------------------------------------------------------------------------
-
-headers = {"Authorization": f"Bearer {config['token']}"}
-
-main_log = queue.Queue()
-
-active_game = None
-active_game_MUTEX = threading.Lock()
-
+config = None
+headers = None
 stockfish = None
 leela = None
+active_game = None
+active_game_MUTEX = threading.Lock()
+main_log = queue.Queue()
 
 # ------------------------------------------------------------------------
 
@@ -156,154 +136,6 @@ class Engine():
 			return best_move
 		else:
 			return test_move
-
-# ------------------------------------------------------------------------
-
-def main():
-
-	global stockfish
-	global leela
-
-	threading.Thread(target = logger_thread, args = ("log.txt", main_log), daemon = True).start()
-	log(f"-- STARTUP -- at {time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())} " + "-" * 40)
-
-	stockfish = Engine(config["stockfish_command"], "SF")
-	leela = Engine(config["leela_command"], "LZ")
-
-	stockfish.send("uci")
-	leela.send("uci")
-
-	stockfish.send("setoption name MultiPV value 10")
-
-	event_stream = requests.get("https://lichess.org/api/stream/event", headers = headers, stream = True)
-
-	for line in event_stream.iter_lines():
-
-		if line:
-
-			dec = line.decode('utf-8')
-			j = json.loads(dec)
-
-			if j["type"] == "challenge":
-				handle_challenge(j["challenge"])
-
-			if j["type"] == "gameStart":
-				start_game(j["game"]["id"])
-
-	log("ERROR: Main event stream closed.")
-
-
-def handle_challenge(challenge):
-
-	global active_game
-	global active_game_MUTEX
-
-#	"challenge": {
-#		"id": "7pGLxJ4F",
-#		"status": "created",
-#		"rated": true,
-#		"color": "random",
-#		"variant": {"key": "standard", "name": "Standard", "short": "Std"},
-#		"timeControl": {"type": "clock", "limit":300, "increment":25, "show": "5+25"},
-#		"challenger": {"id": "lovlas", "name": "Lovlas", "title": "IM", "rating": 2506, "patron": true, "online": true, "lag": 24},
-#		"destUser": {"id": "thibot", "name": "thibot", "title": null, "rating": 1500, "provisional": true, "online": true, "lag": 45},
-#		"perf": {"icon": "#", "name": "Rapid"}
-#	}
-
-	log(f"Incoming challenge from {challenge['challenger']['name']} -- {challenge['timeControl']['show']} (rated: {challenge['rated']})")
-
-	accepting = True
-
-	# Already playing...
-
-	with active_game_MUTEX:
-		if active_game:
-			accepting = False
-
-	# Variants...
-
-	if challenge["variant"]["key"] != "standard":
-		accepting = False
-
-	# Time control...
-
-	if challenge["timeControl"]["type"] != "clock":
-		accepting = False
-	elif challenge["timeControl"]["limit"] < 60 or challenge["timeControl"]["limit"] > 300:
-		accepting = False
-	elif challenge["timeControl"]["increment"] < 1 or challenge["timeControl"]["increment"] > 10:
-		accepting = False
-
-	if not accepting:
-		decline(challenge["id"])
-	else:
-		accept(challenge["id"])
-
-
-def decline(challengeId):
-
-	log(f"Declining challenge {challengeId}.")
-	r = requests.post(f"https://lichess.org/api/challenge/{challengeId}/decline", headers = headers)
-	if r.status_code != 200:
-		try:
-			log(r.json())
-		except:
-			log(f"decline returned {r.status_code}")
-
-def accept(challengeId):
-
-	log(f"Accepting challenge {challengeId}.")
-	r = requests.post(f"https://lichess.org/api/challenge/{challengeId}/accept", headers = headers)
-	if r.status_code != 200:
-		try:
-			log(r.json())
-		except:
-			log(f"accept returned {r.status_code}")
-
-def start_game(gameId):
-
-	global active_game
-	global active_game_MUTEX
-
-	game = Game(gameId)
-	autoabort = False
-
-	with active_game_MUTEX:
-		if active_game:
-			autoabort = True
-		else:
-			active_game = game
-
-	if autoabort:
-		log("WARNING: game started but I seem to be in a game")
-		game.abort()
-		return
-
-	threading.Thread(target = runner, args = (game, )).start()
-	log(f"Game {gameId} started")
-
-
-def runner(game):
-
-	global stockfish
-	global leela
-
-	stockfish.send("ucinewgame")
-	leela.send("ucinewgame")
-
-	game.loop()
-
-
-def sign(num):
-	if num < 0:
-		return -1
-	if num > 0:
-		return 1
-	return 0
-
-
-def log(msg):
-	main_log.put(msg)
 
 # ------------------------------------------------------------------------
 
@@ -564,6 +396,182 @@ def logger_thread(filename, q):
 				flush_time = time.monotonic()
 
 			time.sleep(0.1)		# Essential since we're not blocking on the read.
+
+# ------------------------------------------------------------------------
+
+def main():
+
+	global config
+	global headers
+	global stockfish
+	global leela
+
+	# Load config file...
+
+	try:
+		with open("config.json") as config_file:
+			config = json.load(config_file)
+			for prop in ["account", "token", "stockfish_command", "leela_command"]:
+				if prop not in config:
+					print(f"config.json did not have needed '{prop}' property")
+					sys.exit()
+
+	except FileNotFoundError:
+		print("Couldn't load config.json")
+		sys.exit()
+
+	except json.decoder.JSONDecodeError:
+		print("config.json seems to be illegal JSON")
+		sys.exit()
+
+	headers = {"Authorization": f"Bearer {config['token']}"}
+
+	# Start logging...
+
+	threading.Thread(target = logger_thread, args = ("log.txt", main_log), daemon = True).start()
+	log(f"-- STARTUP -- at {time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())} " + "-" * 40)
+
+	# Start engines...
+
+	stockfish = Engine(config["stockfish_command"], "SF")
+	leela = Engine(config["leela_command"], "LZ")
+
+	stockfish.send("uci")
+	leela.send("uci")
+
+	stockfish.send("setoption name MultiPV value 10")
+
+	# Connect to Lichess API...
+
+	event_stream = requests.get("https://lichess.org/api/stream/event", headers = headers, stream = True)
+
+	for line in event_stream.iter_lines():
+
+		if line:
+
+			dec = line.decode('utf-8')
+			j = json.loads(dec)
+
+			if j["type"] == "challenge":
+				handle_challenge(j["challenge"])
+
+			if j["type"] == "gameStart":
+				start_game(j["game"]["id"])
+
+	log("ERROR: Main event stream closed.")
+
+
+def handle_challenge(challenge):
+
+	global active_game
+	global active_game_MUTEX
+
+#	"challenge": {
+#		"id": "7pGLxJ4F",
+#		"status": "created",
+#		"rated": true,
+#		"color": "random",
+#		"variant": {"key": "standard", "name": "Standard", "short": "Std"},
+#		"timeControl": {"type": "clock", "limit":300, "increment":25, "show": "5+25"},
+#		"challenger": {"id": "lovlas", "name": "Lovlas", "title": "IM", "rating": 2506, "patron": true, "online": true, "lag": 24},
+#		"destUser": {"id": "thibot", "name": "thibot", "title": null, "rating": 1500, "provisional": true, "online": true, "lag": 45},
+#		"perf": {"icon": "#", "name": "Rapid"}
+#	}
+
+	log(f"Incoming challenge from {challenge['challenger']['name']} -- {challenge['timeControl']['show']} (rated: {challenge['rated']})")
+
+	accepting = True
+
+	# Already playing...
+
+	with active_game_MUTEX:
+		if active_game:
+			accepting = False
+
+	# Variants...
+
+	if challenge["variant"]["key"] != "standard":
+		accepting = False
+
+	# Time control...
+
+	if challenge["timeControl"]["type"] != "clock":
+		accepting = False
+	elif challenge["timeControl"]["limit"] < 60 or challenge["timeControl"]["limit"] > 300:
+		accepting = False
+	elif challenge["timeControl"]["increment"] < 1 or challenge["timeControl"]["increment"] > 10:
+		accepting = False
+
+	if not accepting:
+		decline(challenge["id"])
+	else:
+		accept(challenge["id"])
+
+
+def decline(challengeId):
+
+	log(f"Declining challenge {challengeId}.")
+	r = requests.post(f"https://lichess.org/api/challenge/{challengeId}/decline", headers = headers)
+	if r.status_code != 200:
+		try:
+			log(r.json())
+		except:
+			log(f"decline returned {r.status_code}")
+
+def accept(challengeId):
+
+	log(f"Accepting challenge {challengeId}.")
+	r = requests.post(f"https://lichess.org/api/challenge/{challengeId}/accept", headers = headers)
+	if r.status_code != 200:
+		try:
+			log(r.json())
+		except:
+			log(f"accept returned {r.status_code}")
+
+def start_game(gameId):
+
+	global active_game
+	global active_game_MUTEX
+
+	game = Game(gameId)
+	autoabort = False
+
+	with active_game_MUTEX:
+		if active_game:
+			autoabort = True
+		else:
+			active_game = game
+
+	if autoabort:
+		log("WARNING: game started but I seem to be in a game")
+		game.abort()
+		return
+
+	threading.Thread(target = runner, args = (game, )).start()
+	log(f"Game {gameId} started")
+
+
+def runner(game):
+
+	global stockfish
+	global leela
+
+	stockfish.send("ucinewgame")
+	leela.send("ucinewgame")
+
+	game.loop()
+
+
+def sign(num):
+	if num < 0:
+		return -1
+	if num > 0:
+		return 1
+	return 0
+
+
+def log(msg):
+	main_log.put(msg)
 
 # ------------------------------------------------------------------------
 
