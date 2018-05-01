@@ -402,8 +402,9 @@ class Game():
 		if actual_move != provisional_move:
 			self.vetoes += 1
 
-		self.move(actual_move)
 		log(f"Leela wants {provisional_move} ; playing {actual_move}")
+
+		self.move(actual_move)
 
 
 	def resign(self):
@@ -438,11 +439,24 @@ class Game():
 
 		r = requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/move/{move}", headers = headers)
 		if r.status_code != 200:
-			log(f"ERROR: move failed in game {self.gameId}")
 			try:
 				log(r.json())
 			except:
 				log(f"move returned {r.status_code}")
+
+
+	def tell_spectators(self, msg):
+
+		# Post is in x-www-form-urlencoded, which requests does by default (non-JSON)
+
+		data = {"room": "spectator", "text": msg}
+
+		r = requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/chat", data = data, headers = headers)
+		if r.status_code != 200:
+			try:
+				log(r.json())
+			except:
+				log(f"Talking to chat returned {r.status_code}")
 
 
 	def finish(self):
