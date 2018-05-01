@@ -124,7 +124,6 @@ class Engine():
 		if test_score != None and best_score != None:
 			diff = best_score - test_score					# Higher diff is worse
 			if diff > 150:
-				log("FAILED")
 				return best_move
 			else:
 				return test_move
@@ -132,7 +131,6 @@ class Engine():
 		# We didn't get both scores, likely because test_move wasn't seen in the top lines.
 
 		if best_move != None:
-			log("FAILED")
 			return best_move
 		else:
 			return test_move
@@ -243,6 +241,7 @@ class Game():
 
 		self.moves_made += 1
 		if actual_move != provisional_move:
+			log("FAILED")
 			self.vetoes += 1
 
 		log(f"Leela wants {provisional_move} ; playing {actual_move}")
