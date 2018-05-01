@@ -450,7 +450,7 @@ class Game():
 		global active_game
 		global active_game_MUTEX
 
-		log(f"Moves: {self.moves} ; Vetoes: {self.vetoes}")
+		log(f"Moves: {self.moves_made} ; Vetoes: {self.vetoes}")
 
 		with active_game_MUTEX:
 			if active_game == self:
