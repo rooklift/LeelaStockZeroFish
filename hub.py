@@ -319,11 +319,20 @@ class Game():
 		self.moves_made = 0
 		self.vetoes = 0
 
+		self.response_times = dict()		# For chat timeouts: command --> time
+		self.chat_handlers = dict()
+
+		all_cmd_methods = [x for x in dir(self) if x[:4] == "say_"]
+
+		for method in all_cmd_methods:
+			self.chat_handlers["!" + method[4:]] = getattr(self, method)
+
+
 	def loop(self):
 
 		for line in self.events.iter_lines():
 
-			if not line:		# Filter out keep-alive newlines
+			if not line:					# Filter out keep-alive newlines
 				continue
 
 			# Each line is a JSON object containing a type field. Possible values are:
@@ -348,8 +357,10 @@ class Game():
 				self.handle_state(j["state"])
 
 			elif j["type"] == "gameState":
-
 				self.handle_state(j)
+
+			elif j["type"] == "chatLine":
+				self.handle_chat(j)
 
 		log("Game stream closed.")
 		self.finish()
@@ -473,6 +484,32 @@ class Game():
 				log("-----------------------------------------------------------------")
 			else:
 				log("active_game not touched")
+
+
+	def handle_chat(self, j):
+
+		msg = j["text"]
+
+		if msg in self.chat_handlers:	# and j["room"] == "spectator":
+
+			last_response = self.response_times.get(msg)
+
+			if last_response == None or time.monotonic() - last_response > 10:
+				self.chat_handlers[msg]()
+				self.response_times[msg] = time.monotonic()
+
+
+	# All chat handlers should be named say_foo so they can be found by __init__()
+
+	def say_commands(self):
+
+		commands = sorted([key for key in self.chat_handlers])
+		self.tell_spectators("Known commands: " + " ".join(commands))
+
+
+	def say_vetoes(self):
+
+		self.tell_spectators(f"Stockfish has vetoed {self.vetoes} of {self.moves_made} moves.")
 
 # ------------------------------------------------------------------------
 
