@@ -226,11 +226,11 @@ class Game():
 
 		log("-----------------")
 
-		wtime_minus_1s = max(1, state["wtime"] - 1100)
-		btime_minus_1s = max(1, state["btime"] - 1100)
+		wtime_minus_2s = max(1, state["wtime"] - 2000)
+		btime_minus_2s = max(1, state["btime"] - 2000)
 
 		leela.send("position {} moves {}".format(self.gameFull['initialFen'], state['moves']))
-		leela.send("go wtime {} btime {} winc {} binc {}".format(wtime_minus_1s, btime_minus_1s, state['winc'], state['binc']))
+		leela.send("go wtime {} btime {} winc {} binc {}".format(wtime_minus_2s, btime_minus_2s, state['winc'], state['binc']))
 
 		provisional_move = leela.get_best_move()
 
