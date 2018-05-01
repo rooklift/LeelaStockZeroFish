@@ -36,7 +36,7 @@ class Engine():
 		# I think it's necessary to do SOMETHING with stderr (so it doesn't build up and hang the engine).
 		# As an alternative, we could send it to devnull.
 
-		threading.Thread(target = stderr_to_log, args = (self.process, f"{self.shortname}_stderr.txt"), daemon = True).start()
+		threading.Thread(target = stderr_to_log, args = (self.process, "{}_stderr.txt".format(self.shortname)), daemon = True).start()
 
 	def send(self, msg):
 
@@ -71,7 +71,7 @@ class Engine():
 			z = self.stdout_queue.get()
 			# log(self.shortname + " :: " + z)
 
-			if f"pv {test_move}" in z:		# Sketchy because UCI allows random whitespace
+			if "pv {}".format(test_move) in z:		# Sketchy because UCI allows random whitespace
 
 				tokens = z.split()
 
@@ -119,7 +119,7 @@ class Engine():
 			if "bestmove" in z:
 				break
 
-		log(f"{test_move} ({test_score}) vs {best_move} ({best_score})")
+		log("{} ({}) vs {} ({})".format(test_move, test_score, best_move, best_score))
 
 		if test_score != None and best_score != None:
 			diff = best_score - test_score					# Higher diff is worse
@@ -144,7 +144,7 @@ class Game():
 		self.gameId = gameId
 		self.gameFull = None
 		self.colour = None
-		self.events = requests.get(f"https://lichess.org/api/bot/game/stream/{gameId}", headers = headers, stream = True)
+		self.events = requests.get("https://lichess.org/api/bot/game/stream/{}".format(gameId), headers = headers, stream = True)
 
 		self.moves_made = 0
 		self.vetoes = 0
@@ -192,7 +192,7 @@ class Game():
 			elif j["type"] == "chatLine":
 				self.handle_chat(j)
 
-		log("Game stream closed.")
+		log("Game stream closed...")
 		self.finish()
 
 
@@ -214,7 +214,7 @@ class Game():
 
 		if len(moves) > 0:
 			log("-----------------")
-			log(f"Opponent played {moves[-1]}")
+			log("Opponent played {}".format(moves[-1]))
 
 		self.play(state)
 
@@ -229,13 +229,13 @@ class Game():
 		wtime_minus_1s = max(1, state["wtime"] - 1100)
 		btime_minus_1s = max(1, state["btime"] - 1100)
 
-		leela.send(f"position {self.gameFull['initialFen']} moves {state['moves']}")
-		leela.send(f"go wtime {wtime_minus_1s} btime {btime_minus_1s} winc {state['winc']} binc {state['binc']}")
+		leela.send("position {} moves {}".format(self.gameFull['initialFen'], state['moves']))
+		leela.send("go wtime {} btime {} winc {} binc {}".format(wtime_minus_1s, btime_minus_1s, state['winc'], state['binc']))
 
 		provisional_move = leela.get_best_move()
 
-		stockfish.send(f"position {self.gameFull['initialFen']} moves {state['moves']}")
-		stockfish.send(f"go movetime 1000")
+		stockfish.send("position {} moves {}".format(self.gameFull['initialFen'], state['moves']))
+		stockfish.send("go movetime 1000")
 
 		actual_move = stockfish.validate(provisional_move)
 
@@ -244,47 +244,47 @@ class Game():
 			log("FAILED")
 			self.vetoes += 1
 
-		log(f"Leela wants {provisional_move} ; playing {actual_move}")
+		log("Leela wants {} ; playing {}".format(provisional_move, actual_move))
 
 		self.move(actual_move)
 
 
 	def resign(self):
 
-		log(f"Resigning game {self.gameId}.")
+		log("Resigning game {}".format(self.gameId))
 
-		requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/resign", headers = headers)
+		requests.post("https://lichess.org/api/bot/game/{}/resign".format(self.gameId), headers = headers)
 		if r.status_code != 200:
 			try:
 				log(r.json())
 			except:
-				log(f"resign returned {r.status_code}")
+				log("resign returned {}".format(r.status_code))
 
 		self.finish()
 
 
 	def abort(self):
 
-		log(f"Aborting game {self.gameId}.")
+		log("Aborting game {}".format(self.gameId))
 
-		r = requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/abort", headers = headers)
+		r = requests.post("https://lichess.org/api/bot/game/{}/abort".format(self.gameId), headers = headers)
 		if r.status_code != 200:
 			try:
 				log(r.json())
 			except:
-				log(f"abort returned {r.status_code}")
+				log("abort returned {}".format(r.status_code))
 
 		self.finish()
 
 
 	def move(self, move):		# move in UCI format
 
-		r = requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/move/{move}", headers = headers)
+		r = requests.post("https://lichess.org/api/bot/game/{}/move/{}".format(self.gameId, move) , headers = headers)
 		if r.status_code != 200:
 			try:
 				log(r.json())
 			except:
-				log(f"move returned {r.status_code}")
+				log("move returned {}".format(r.status_code))
 
 
 	def tell_spectators(self, msg):
@@ -293,12 +293,12 @@ class Game():
 
 		data = {"room": "spectator", "text": msg}
 
-		r = requests.post(f"https://lichess.org/api/bot/game/{self.gameId}/chat", data = data, headers = headers)
+		r = requests.post("https://lichess.org/api/bot/game/{}/chat".format(self.gameId), data = data, headers = headers)
 		if r.status_code != 200:
 			try:
 				log(r.json())
 			except:
-				log(f"Talking to chat returned {r.status_code}")
+				log("Talking to chat returned {}".format(r.status_code))
 
 
 	def finish(self):
@@ -306,7 +306,7 @@ class Game():
 		global active_game
 		global active_game_MUTEX
 
-		log(f"Moves: {self.moves_made} ; Vetoes: {self.vetoes}")
+		log("Moves: {} ; Vetoes: {}".format(self.moves_made, self.vetoes))
 
 		with active_game_MUTEX:
 			if active_game == self:
@@ -340,7 +340,7 @@ class Game():
 
 	def say_vetoes(self):
 
-		self.tell_spectators(f"Stockfish has vetoed {self.vetoes} of {self.moves_made} moves.")
+		self.tell_spectators("Stockfish has vetoed {} of {} moves.".format(self.vetoes, self.moves_made))
 
 # ------------------------------------------------------------------------
 
@@ -358,7 +358,7 @@ def main():
 			config = json.load(config_file)
 			for prop in ["account", "token", "stockfish_command", "leela_command"]:
 				if prop not in config:
-					print(f"config.json did not have needed '{prop}' property")
+					print("config.json did not have needed '{}' property".format(prop))
 					sys.exit()
 
 	except FileNotFoundError:
@@ -369,12 +369,12 @@ def main():
 		print("config.json seems to be illegal JSON")
 		sys.exit()
 
-	headers = {"Authorization": f"Bearer {config['token']}"}
+	headers = {"Authorization": "Bearer {}".format(config['token'])}
 
 	# Start logging...
 
 	threading.Thread(target = logger_thread, args = ("log.txt", main_log), daemon = True).start()
-	log(f"-- STARTUP -- at {time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())} " + "-" * 40)
+	log("-- STARTUP -- at {} ".format(time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())) + "-" * 40)
 
 	# Start engines...
 
@@ -403,7 +403,7 @@ def main():
 			if j["type"] == "gameStart":
 				start_game(j["game"]["id"])
 
-	log("ERROR: Main event stream closed.")
+	log("ERROR: Main event stream closed!")
 
 
 def handle_challenge(challenge):
@@ -423,7 +423,7 @@ def handle_challenge(challenge):
 #		"perf": {"icon": "#", "name": "Rapid"}
 #	}
 
-	log(f"Incoming challenge from {challenge['challenger']['name']} -- {challenge['timeControl']['show']} (rated: {challenge['rated']})")
+	log("Incoming challenge from {} -- {} (rated: {})".format(challenge['challenger']['name'], challenge['timeControl']['show'], challenge['rated']))
 
 	accepting = True
 
@@ -455,23 +455,23 @@ def handle_challenge(challenge):
 
 def decline(challengeId):
 
-	log(f"Declining challenge {challengeId}.")
-	r = requests.post(f"https://lichess.org/api/challenge/{challengeId}/decline", headers = headers)
+	log("Declining challenge {}".format(challengeId))
+	r = requests.post("https://lichess.org/api/challenge/{}/decline".format(challengeId), headers = headers)
 	if r.status_code != 200:
 		try:
 			log(r.json())
 		except:
-			log(f"decline returned {r.status_code}")
+			log("decline returned {}".format(r.status_code))
 
 def accept(challengeId):
 
-	log(f"Accepting challenge {challengeId}.")
-	r = requests.post(f"https://lichess.org/api/challenge/{challengeId}/accept", headers = headers)
+	log("Accepting challenge {}".format(challengeId))
+	r = requests.post("https://lichess.org/api/challenge/{}/accept".format(challengeId), headers = headers)
 	if r.status_code != 200:
 		try:
 			log(r.json())
 		except:
-			log(f"accept returned {r.status_code}")
+			log("accept returned {}".format(r.status_code))
 
 def start_game(gameId):
 
@@ -493,7 +493,7 @@ def start_game(gameId):
 		return
 
 	threading.Thread(target = runner, args = (game, )).start()
-	log(f"Game {gameId} started")
+	log("Game {} started".format(gameId))
 
 
 def runner(game):
@@ -525,7 +525,7 @@ def stdout_to_queue(process, q, shortname):
 		z = process.stdout.readline().decode("utf-8")
 
 		if z == "":
-			log(f"WARNING: got EOF while reading from {shortname}.")
+			log("WARNING: got EOF while reading from {}".format(shortname))
 			return
 		elif z.strip() == "":
 			pass
