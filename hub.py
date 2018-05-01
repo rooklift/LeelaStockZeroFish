@@ -316,6 +316,9 @@ class Game():
 		self.colour = None
 		self.events = requests.get(f"https://lichess.org/api/bot/game/stream/{gameId}", headers = headers, stream = True)
 
+		self.moves_made = 0
+		self.vetoes = 0
+
 	def loop(self):
 
 		for line in self.events.iter_lines():
@@ -349,7 +352,6 @@ class Game():
 				self.handle_state(j)
 
 		log("Game stream closed.")
-		log("-----------------------------------------------------------------")
 		self.finish()
 
 
@@ -368,6 +370,10 @@ class Game():
 			return
 		if len(moves) % 2 == 1 and self.colour == "white":
 			return
+
+		if len(moves) > 0:
+			log("-----------------")
+			log(f"Opponent played {moves[-1]}")
 
 		self.play(state)
 
@@ -391,6 +397,10 @@ class Game():
 		stockfish.send(f"go movetime 1000")
 
 		actual_move = stockfish.validate(provisional_move)
+
+		self.moves_made += 1
+		if actual_move != provisional_move:
+			self.vetoes += 1
 
 		self.move(actual_move)
 		log(f"Leela wants {provisional_move} ; playing {actual_move}")
@@ -440,10 +450,13 @@ class Game():
 		global active_game
 		global active_game_MUTEX
 
+		log(f"Moves: {self.moves} ; Vetoes: {self.vetoes}")
+
 		with active_game_MUTEX:
 			if active_game == self:
 				active_game = None
 				log("active_game set to None")
+				log("-----------------------------------------------------------------")
 			else:
 				log("active_game not touched")
 
