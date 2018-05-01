@@ -345,60 +345,6 @@ class Game():
 
 # ------------------------------------------------------------------------
 
-def stdout_to_queue(process, q, shortname):
-
-	while 1:
-		z = process.stdout.readline().decode("utf-8")
-
-		if z == "":
-			log(f"WARNING: got EOF while reading from {shortname}.")
-			return
-		elif z.strip() == "":
-			pass
-		else:
-			q.put(z.strip())
-
-
-def stderr_to_log(process, filename):
-
-	logfile = open(filename, "a")
-
-	while 1:
-		z = process.stderr.readline().decode("utf-8")
-
-		if z == "":
-			logfile.write("EOF" + "\n")
-			return
-		else:
-			logfile.write(z)
-
-
-def logger_thread(filename, q):
-
-	logfile = open(filename, "a")
-
-	flush_time = time.monotonic()
-
-	while 1:
-
-		try:
-
-			msg = q.get(block = False)
-
-			msg = str(msg).strip()
-			logfile.write(msg + "\n")
-			print(msg)
-
-		except queue.Empty:
-
-			if time.monotonic() - flush_time > 1:
-				logfile.flush()
-				flush_time = time.monotonic()
-
-			time.sleep(0.1)		# Essential since we're not blocking on the read.
-
-# ------------------------------------------------------------------------
-
 def main():
 
 	global config
@@ -572,6 +518,59 @@ def sign(num):
 
 def log(msg):
 	main_log.put(msg)
+
+
+def stdout_to_queue(process, q, shortname):
+
+	while 1:
+		z = process.stdout.readline().decode("utf-8")
+
+		if z == "":
+			log(f"WARNING: got EOF while reading from {shortname}.")
+			return
+		elif z.strip() == "":
+			pass
+		else:
+			q.put(z.strip())
+
+
+def stderr_to_log(process, filename):
+
+	logfile = open(filename, "a")
+
+	while 1:
+		z = process.stderr.readline().decode("utf-8")
+
+		if z == "":
+			logfile.write("EOF" + "\n")
+			return
+		else:
+			logfile.write(z)
+
+
+def logger_thread(filename, q):
+
+	logfile = open(filename, "a")
+
+	flush_time = time.monotonic()
+
+	while 1:
+
+		try:
+
+			msg = q.get(block = False)
+
+			msg = str(msg).strip()
+			logfile.write(msg + "\n")
+			print(msg)
+
+		except queue.Empty:
+
+			if time.monotonic() - flush_time > 1:
+				logfile.flush()
+				flush_time = time.monotonic()
+
+			time.sleep(0.1)		# Essential since we're not blocking on the read.
 
 # ------------------------------------------------------------------------
 
