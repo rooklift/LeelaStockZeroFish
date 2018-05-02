@@ -342,6 +342,11 @@ class Game():
 
 		self.tell_spectators("Stockfish has vetoed {} of {} moves.".format(self.vetoes, self.moves_made))
 
+
+	def say_settings(self):
+
+		self.tell_spectators("SF hash: {} MB; veto CP threshold: {}".format(config["stockfish_hash"], config["veto_cp"]))
+
 # ------------------------------------------------------------------------
 
 def main():
