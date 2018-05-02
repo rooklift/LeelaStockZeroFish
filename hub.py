@@ -123,7 +123,7 @@ class Engine():
 
 		if test_score != None and best_score != None:
 			diff = best_score - test_score					# Higher diff is worse
-			if diff > 150:
+			if diff > config["veto_cp"]:
 				return best_move
 			else:
 				return test_move
@@ -356,7 +356,7 @@ def main():
 	try:
 		with open("config.json") as config_file:
 			config = json.load(config_file)
-			for prop in ["account", "token", "stockfish_command", "leela_command"]:
+			for prop in ["account", "token", "veto_cp", "leela_command", "stockfish_command", "stockfish_hash"]:
 				if prop not in config:
 					print("config.json did not have needed '{}' property".format(prop))
 					sys.exit()
@@ -382,6 +382,7 @@ def main():
 	leela = Engine(config["leela_command"], "LZ")
 
 	stockfish.send("uci")
+	stockfish.send("setoption name Hash value {}".format(config["stockfish_hash"))
 	leela.send("uci")
 
 	stockfish.send("setoption name MultiPV value 10")

@@ -1,6 +1,8 @@
 {
-	"account":				"Bot_Account_Here",
-	"token":				"API_Token_Here",
-	"stockfish_command":	["./stockfish_9_x64.exe"],
-	"leela_command":		["./lczero.exe", "-w", "network"]
+	"account":				"BotAccountName",
+	"token":				"xxxxxxxxxxxxxxxx",
+	"veto_cp":				75,
+	"leela_command":		["./lczero.exe", "-w", "network"],
+	"stockfish_command":	["./stockfish.exe"],
+	"stockfish_hash":		1024
 }
