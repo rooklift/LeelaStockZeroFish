@@ -382,7 +382,7 @@ def main():
 	leela = Engine(config["leela_command"], "LZ")
 
 	stockfish.send("uci")
-	stockfish.send("setoption name Hash value {}".format(config["stockfish_hash"))
+	stockfish.send("setoption name Hash value {}".format(config["stockfish_hash"]))
 	leela.send("uci")
 
 	stockfish.send("setoption name MultiPV value 10")
