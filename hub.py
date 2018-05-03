@@ -179,10 +179,17 @@ class Game():
 
 				log(j)
 
-				if j["white"]["name"].lower() == config["account"].lower():
-					self.colour = "white"
-				elif j["black"]["name"].lower() == config["account"].lower():
-					self.colour = "black"
+				try:
+					if j["white"]["name"].lower() == config["account"].lower():
+						self.colour = "white"
+				except:
+					pass
+
+				try:
+					if j["black"]["name"].lower() == config["account"].lower():
+						self.colour = "black"
+				except:
+					pass
 
 				self.handle_state(j["state"])
 
