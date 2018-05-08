@@ -78,6 +78,8 @@ class Engine():
 		while 1:
 
 			z = self.stdout_queue.get()
+			# log(self.shortname + " :: " + z)
+
 			tokens = z.split()
 
 			if "score cp" in z:
