@@ -38,6 +38,7 @@ class Engine():
 
 		threading.Thread(target = stderr_to_log, args = (self.process, "{}_stderr.txt".format(self.shortname)), daemon = True).start()
 
+
 	def send(self, msg):
 
 		msg = msg.strip()
@@ -46,9 +47,11 @@ class Engine():
 		self.process.stdin.flush()
 		log(self.shortname + " <- " + msg)
 
-	def get_best_move(self):
 
-		# Assumes the go command has already been sent
+	def get_best_move(self, initial_fen, moves_list, wtime, btime, winc, binc):
+
+		self.send("position {} moves {}".format(initial_fen, moves_list))
+		self.send("go wtime {} btime {} winc {} binc {}".format(wtime, btime, winc, binc))
 
 		while 1:
 			z = self.stdout_queue.get()
@@ -58,65 +61,74 @@ class Engine():
 				tokens = z.split()
 				return tokens[1]
 
-	def validate(self, test_move):
 
-		# Assumes the go command has already been sent, and MultiPV is on
+	def validate(self, initial_fen, moves_list, test_move):
+
 		# Returns the move we should actually play
 
 		test_score = None
 		best_move = None
 		best_score = None
 
+		# First get SF's best move...
+
+		self.send("position {} moves {}".format(initial_fen, moves_list))
+		self.send("go movetime 500")
+
 		while 1:
+
 			z = self.stdout_queue.get()
-			# log(self.shortname + " :: " + z)
+			tokens = z.split()
 
-			if "pv {}".format(test_move) in z:		# Sketchy because UCI allows random whitespace
+			if "score cp" in z:
 
-				tokens = z.split()
+				score_index = tokens.index("cp") + 1
+				best_score = int(tokens[score_index])
 
-				try:
-					score_index = tokens.index("cp") + 1
-					test_score = int(tokens[score_index])
-				except ValueError:
-					try:
-						mate_index = tokens.index("mate") + 1
+			elif "score mate" in z:
 
-						mate_in = int(tokens[mate_index])
+				mate_index = tokens.index("mate") + 1
+				mate_in = int(tokens[mate_index])
+				if mate_in > 0:
+					best_score = 100000 - (mate_in * 1000)
+				else:
+					best_score = -100000 + (-mate_in * 1000)
 
-						if mate_in > 0:
-							test_score = 100000 - (mate_in * 1000)
-						else:
-							test_score = -100000 + (-mate_in * 1000)
+			elif "bestmove" in z:
 
-					except ValueError:
-						pass
+				best_move = tokens[1]
+				break
 
-			if "multipv 1 " in z:		# Space is needed
+		if best_move == test_move:
+			log("Agreement: {}".format(best_move))
+			return best_move
 
-				tokens = z.split()
+		# The moves differ. Find the score for the test move and compare.
 
-				move_index = tokens.index("pv") + 1
-				best_move = tokens[move_index]
+		self.send("position {} moves {}".format(initial_fen, moves_list))
+		self.send("go movetime 500 searchmoves {}".format(test_move))
 
-				try:
-					score_index = tokens.index("cp") + 1
-					best_score = int(tokens[score_index])
-				except ValueError:
-					try:
-						mate_index = tokens.index("mate") + 1
+		while 1:
 
-						mate_in = int(tokens[mate_index])
+			z = self.stdout_queue.get()
+			tokens = z.split()
 
-						if mate_in > 0:
-							best_score = 100000 - (mate_in * 1000)
-						else:
-							best_score = -100000 + (-mate_in * 1000)
+			if "score cp" in z:
 
-					except ValueError:
-						pass
+				score_index = tokens.index("cp") + 1
+				test_score = int(tokens[score_index])
 
-			if "bestmove" in z:
+			elif "score mate" in z:
+
+				mate_index = tokens.index("mate") + 1
+				mate_in = int(tokens[mate_index])
+				if mate_in > 0:
+					test_score = 100000 - (mate_in * 1000)
+				else:
+					test_score = -100000 + (-mate_in * 1000)
+
+			elif "bestmove" in z:
+
 				break
 
 		log("{} ({}) vs {} ({})".format(test_move, test_score, best_move, best_score))
@@ -128,7 +140,9 @@ class Engine():
 			else:
 				return test_move
 
-		# We didn't get both scores, likely because test_move wasn't seen in the top lines.
+		# We somehow didn't get both scores (impossible?)
+
+		log("WARNING: did not get both scores from validate()")
 
 		if best_move != None:
 			return best_move
@@ -236,15 +250,10 @@ class Game():
 		wtime_minus_2s = max(1, state["wtime"] - 2000)
 		btime_minus_2s = max(1, state["btime"] - 2000)
 
-		leela.send("position {} moves {}".format(self.gameFull['initialFen'], state['moves']))
-		leela.send("go wtime {} btime {} winc {} binc {}".format(wtime_minus_2s, btime_minus_2s, state['winc'], state['binc']))
+		provisional_move = leela.get_best_move(
+			self.gameFull['initialFen'], state['moves'], wtime_minus_2s, btime_minus_2s, state['winc'], state['binc'])
 
-		provisional_move = leela.get_best_move()
-
-		stockfish.send("position {} moves {}".format(self.gameFull['initialFen'], state['moves']))
-		stockfish.send("go movetime 1000")
-
-		actual_move = stockfish.validate(provisional_move)
+		actual_move = stockfish.validate(self.gameFull['initialFen'], state['moves'], provisional_move)
 
 		self.moves_made += 1
 		if actual_move != provisional_move:
@@ -396,7 +405,6 @@ def main():
 	stockfish = Engine(config["stockfish_command"], "SF")
 	stockfish.send("uci")
 	stockfish.send("setoption name Hash value {}".format(config["stockfish_hash"]))
-	stockfish.send("setoption name MultiPV value 10")
 
 	# Connect to Lichess API...
 
@@ -475,6 +483,7 @@ def decline(challengeId):
 		except:
 			log("decline returned {}".format(r.status_code))
 
+
 def accept(challengeId):
 
 	log("Accepting challenge {}".format(challengeId))
@@ -484,6 +493,7 @@ def accept(challengeId):
 			log(r.json())
 		except:
 			log("accept returned {}".format(r.status_code))
+
 
 def start_game(gameId):
 
