@@ -328,6 +328,13 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 				if "score cp" in msg and "lowerbound" not in msg and "upperbound" not in msg:
 					score_index = tokens.index("cp") + 1
 					lz_score = int(tokens[score_index])
+				elif "score mate" in msg:
+					mate_index = tokens.index("mate") + 1
+					mate_in = int(tokens[mate_index])
+					if mate_in > 0:
+						lz_score = 100000 - (mate_in * 1000)
+					else:
+						lz_score = -100000 + (-mate_in * 1000)
 				elif "bestmove" in msg:
 					lz_move = tokens[1]
 					break
@@ -362,11 +369,11 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 	# If SF's score is way better than LZ's then go with its move. Note that there's
 	# no blunder checking, i.e SF is not asked its opinion on LZ's move.
 
-	if sf_move == lz_move:
+	if lz_move == sf_move:
 		log("   Agreed: {} ({}/{})".format(lz_move, lz_score, sf_score))
 		return lz_move
 
-	if sf_score is not None and lz_score is not None:
+	if lz_score is not None and sf_score is not None:
 		if sf_score > lz_score + config["veto_cp"]:
 			log("Stockfish: {} ({})".format(sf_move, sf_score))
 			return sf_move
