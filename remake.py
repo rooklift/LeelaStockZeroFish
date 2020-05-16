@@ -290,6 +290,14 @@ def handle_state(state, gameId, gameFull, colour):
 	if len(moves) > 0:
 		log("Opponent played {}".format(moves[-1]))
 
+	# Crude latency compensation...
+
+	if colour == "white" and state["wtime"] < 5000:
+		state["wtime"] //= 2
+
+	if colour == "black" and state["btime"] < 5000:
+		state["btime"] //= 2
+
 	mymove = genmove(gameFull["initialFen"], state["moves"], state["wtime"], state["btime"], state["winc"], state["binc"])
 
 	r = requests.post("https://lichess.org/api/bot/game/{}/move/{}".format(gameId, mymove) , headers = headers)
