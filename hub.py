@@ -1,8 +1,6 @@
 import json, queue, subprocess, sys, threading, time
 import requests
 
-# ------------------------------------------------------------------------
-
 config = None
 headers = None
 stockfish = None
@@ -11,7 +9,9 @@ active_game = None
 active_game_MUTEX = threading.Lock()
 main_log = queue.Queue()
 
-# ------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+
 
 class Engine():
 
@@ -151,7 +151,9 @@ class Engine():
 		else:
 			return test_move
 
-# ------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+
 
 class Game():
 
@@ -363,9 +365,11 @@ class Game():
 
 	def say_settings(self):
 
-		self.tell_spectators("SF hash: {} MB; veto CP threshold: {}".format(config["stockfish_hash"], config["veto_cp"]))
+		self.tell_spectators("Veto CP threshold: {}".format(config["veto_cp"]))
 
-# ------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+
 
 def main():
 
@@ -379,7 +383,7 @@ def main():
 	try:
 		with open("config.json") as config_file:
 			config = json.load(config_file)
-			for prop in ["account", "token", "veto_cp", "leela_command", "stockfish_command", "stockfish_hash"]:
+			for prop in ["account", "token", "veto_cp", "leela_command", "stockfish_command", "stockfish_options"]:
 				if prop not in config:
 					print("config.json did not have needed '{}' property".format(prop))
 					sys.exit()
@@ -406,7 +410,9 @@ def main():
 
 	stockfish = Engine(config["stockfish_command"], "SF")
 	stockfish.send("uci")
-	stockfish.send("setoption name Hash value {}".format(config["stockfish_hash"]))
+
+	for key in config["stockfish_options"]:
+		stockfish.send("setoption name {} value {}".format(key, config["stockfish_options"][key]))
 
 	# Connect to Lichess API...
 
@@ -600,7 +606,9 @@ def logger_thread(filename, q):
 
 			time.sleep(0.1)		# Essential since we're not blocking on the read.
 
-# ------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+
 
 if __name__ == "__main__":
 	main()
