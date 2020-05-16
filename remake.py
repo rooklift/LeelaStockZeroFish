@@ -59,8 +59,8 @@ def engine_stderr_watcher(engine):
 
 def log(msg):
 	try:
-		if msg.strip():
-			print(msg.strip())
+		if msg.rstrip():
+			print(msg.rstrip())
 	except:
 		print("log() got unprintable msg: {}".format(repr(msg)))
 
