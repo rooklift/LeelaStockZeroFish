@@ -1,8 +1,19 @@
 {
-	"account":				"BotAccountName",
-	"token":				"xxxxxxxxxxxxxxxx",
-	"veto_cp":				75,
-	"leela_command":		["./lczero.exe", "-w", "network"],
-	"stockfish_command":	["./stockfish.exe"],
-	"stockfish_hash":		1024
+	"account": "BotAccountName",
+	"token": "xxxxxxxxxxxxxxxx",
+	"veto_cp": 75,
+
+	"leela_command": "C:\\Programs (self-installed)\\lc0-cudnn git\\lc0.exe",
+
+	"leela_options": {
+		"WeightsFile": "C:\\Users\\Owner\\Documents\\Misc\\Chess\\Lc0 Networks\\63409",
+		"MoveOverheadMs": 0
+	},
+
+	"stockfish_command": "C:\\Programs (self-installed)\\Chess Engines\\stockfish.exe",
+
+	"stockfish_options": {
+		"Hash": 4096,
+		"Threads": 4
+	}
 }
