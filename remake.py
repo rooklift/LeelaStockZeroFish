@@ -25,7 +25,7 @@ class Engine():
 		b = bytes(msg + "\n", encoding = "ascii")
 		self.process.stdin.write(b)
 		self.process.stdin.flush()
-		log(self.shortname + " <-- " + msg)
+		# log(self.shortname + " <-- " + msg)
 
 class Game():
 
@@ -288,7 +288,7 @@ def handle_state(state, gameId, gameFull, colour):
 		return
 
 	if len(moves) > 0:
-		log("Opponent played {}".format(moves[-1]))
+		log("{}".format(moves[-1]))
 
 	# Crude latency compensation...
 
@@ -325,7 +325,7 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 				msg = lz.output.get(block = False)
 				tokens = msg.split()
 
-				if "score cp" in msg:
+				if "score cp" in msg and "lowerbound" not in msg and "upperbound" not in msg:
 					score_index = tokens.index("cp") + 1
 					lz_score = int(tokens[score_index])
 				elif "bestmove" in msg:
@@ -342,9 +342,16 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 				msg = sf.output.get(block = False)
 				tokens = msg.split()
 
-				if "score cp" in msg:
+				if "score cp" in msg and "lowerbound" not in msg and "upperbound" not in msg:
 					score_index = tokens.index("cp") + 1
 					sf_score = int(tokens[score_index])
+				elif "score mate" in msg:
+					mate_index = tokens.index("mate") + 1
+					mate_in = int(tokens[mate_index])
+					if mate_in > 0:
+						sf_score = 100000 - (mate_in * 1000)
+					else:
+						sf_score = -100000 + (-mate_in * 1000)
 				elif "bestmove" in msg:
 					sf_move = tokens[1]
 					break
@@ -356,15 +363,15 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 	# no blunder checking, i.e SF is not asked its opinion on LZ's move.
 
 	if sf_move == lz_move:
-		log("Playing agreed move {}".format(lz_move))
+		log("   Agreed: {} ({}/{})".format(lz_move, lz_score, sf_score))
 		return lz_move
 
 	if sf_score is not None and lz_score is not None:
 		if sf_score > lz_score + config["veto_cp"]:
-			log("Playing Stockfish move {}".format(sf_move))
+			log("Stockfish: {} ({})".format(sf_move, sf_score))
 			return sf_move
 
-	log("Playing Lc0 move {}".format(lz_move))
+	log("      Lc0: {} ({})".format(lz_move, lz_score))
 	return lz_move
 
 # ---------------------------------------------------------------------------------------------------------
