@@ -2,4 +2,4 @@
 
 The software behind https://lichess.org/@/LeelaStockZeroFish
 
-How it works: LZ is asked for a move, and SF can veto it if it thinks it's terrible (for some definition of "terrible").
+Originally using SF as a blunder-checker for Leela, instead we now simply let Leela play moves unless Stockfish finds something much better. 
