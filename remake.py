@@ -58,11 +58,14 @@ def engine_stderr_watcher(engine):
 		# log(engine.shortname + " (e) " + msg)
 
 def log(msg):
-	try:
+	if isinstance(msg, str):
 		if msg.rstrip():
 			print(msg.rstrip())
-	except:
-		print("log() got unprintable msg: {}".format(repr(msg)))
+	else:
+		try:
+			print(repr(msg))
+		except:
+			print("log() got unprintable msg...")
 
 def load_config():
 
@@ -79,6 +82,17 @@ def load_config():
 	return config
 
 def main():
+
+	threading.Thread(target = app, daemon = True).start()
+
+	while 1:
+		try:
+			time.sleep(0.5)
+		except:
+			print("Main thread interrupted.")
+			sys.exit()	# i.e. happens if keyboard interrupt
+
+def app():
 
 	global config
 	global headers
@@ -212,7 +226,7 @@ def start_game(gameId):
 		abort_game(gameId)
 		return
 
-	threading.Thread(target = runner, args = (gameId, )).start()
+	threading.Thread(target = runner, args = (gameId, ), daemon = True).start()
 	log("Game {} started".format(gameId))
 
 # ---------------------------------------------------------------------------------------------------------
