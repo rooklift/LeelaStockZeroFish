@@ -445,35 +445,40 @@ def handle_challenge(challenge):
 #		"perf": {"icon": "#", "name": "Rapid"}
 #	}
 
-	log("Incoming challenge from {} -- {} (rated: {})".format(challenge['challenger']['name'], challenge['timeControl']['show'], challenge['rated']))
+	try:
 
-	accepting = True
+		log("Incoming challenge from {} -- {} (rated: {})".format(challenge['challenger']['name'], challenge['timeControl']['show'], challenge['rated']))
 
-	# Already playing...
+		accepting = True
 
-	with active_game_MUTEX:
-		if active_game:
+		# Already playing...
+
+		with active_game_MUTEX:
+			if active_game:
+				accepting = False
+
+		# Variants...
+
+		if challenge["variant"]["key"] != "standard":
 			accepting = False
 
-	# Variants...
+		# Time control...
 
-	if challenge["variant"]["key"] != "standard":
-		accepting = False
+		if challenge["timeControl"]["type"] != "clock":
+			accepting = False
+		elif challenge["timeControl"]["limit"] < 60 or challenge["timeControl"]["limit"] > 300:
+			accepting = False
+		elif challenge["timeControl"]["increment"] < 1 or challenge["timeControl"]["increment"] > 10:
+			accepting = False
 
-	# Time control...
+		if not accepting:
+			decline(challenge["id"])
+		else:
+			accept(challenge["id"])
 
-	if challenge["timeControl"]["type"] != "clock":
-		accepting = False
-	elif challenge["timeControl"]["limit"] < 60 or challenge["timeControl"]["limit"] > 300:
-		accepting = False
-	elif challenge["timeControl"]["increment"] < 1 or challenge["timeControl"]["increment"] > 10:
-		accepting = False
-
-	if not accepting:
+	except Exception as err:
+		log("Exception in handle_challenge(): {}".format(repr(err)))
 		decline(challenge["id"])
-	else:
-		accept(challenge["id"])
-
 
 def decline(challengeId):
 
