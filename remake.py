@@ -25,7 +25,7 @@ class Engine():
 		b = bytes(msg + "\n", encoding = "ascii")
 		self.process.stdin.write(b)
 		self.process.stdin.flush()
-		log(self.shortname + " <-- " + msg)
+		# log(self.shortname + " <-- " + msg)
 
 class Game():
 
@@ -46,7 +46,7 @@ def engine_stdout_watcher(engine):
 			return		# EOF
 		msg = msg.strip()
 		engine.output.put(msg)
-		log(engine.shortname + " --> " + msg)
+		# log(engine.shortname + " --> " + msg)
 
 def engine_stderr_watcher(engine):
 
@@ -55,14 +55,14 @@ def engine_stderr_watcher(engine):
 		if msg == "":
 			return		# EOF
 		msg = msg.strip()
-		log(engine.shortname + " (e) " + msg)
+		# log(engine.shortname + " (e) " + msg)
 
 def log(msg):
 	try:
 		if msg.strip():
 			print(msg.strip())
 	except:
-		print("log() got unprintable msg")
+		print("log() got unprintable msg: {}".format(repr(msg)))
 
 def load_config():
 
@@ -249,8 +249,6 @@ def runner(gameId):
 
 			gameFull = j
 
-			log(j)
-
 			try:
 				if j["white"]["name"].lower() == config["account"].lower():
 					colour = "white"
@@ -352,10 +350,16 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 	# If SF's score is way better than LZ's then go with its move. Note that there's
 	# no blunder checking, i.e SF is not asked its opinion on LZ's move.
 
+	if sf_move == lz_move:
+		log("Playing agreed move {}".format(lz_move))
+		return lz_move
+
 	if sf_score is not None and lz_score is not None:
 		if sf_score > lz_score + config["veto_cp"]:
+			log("Playing Stockfish move {}".format(sf_move))
 			return sf_move
 
+	log("Playing Lc0 move {}".format(lz_move))
 	return lz_move
 
 # ---------------------------------------------------------------------------------------------------------
