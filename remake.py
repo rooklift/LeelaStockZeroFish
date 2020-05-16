@@ -90,6 +90,15 @@ def main():
 	lz = Engine(config["leela_command"], "LZ")
 	sf = Engine(config["stockfish_command"], "SF")
 
+	lz.send("uci")
+	sf.send("uci")
+
+	for key in config["stockfish_options"]:
+		sf.send("setoption name {} value {}".format(key, config["stockfish_options"][key]))
+
+	for key in config["leela_options"]:
+		lz.send("setoption name {} value {}".format(key, config["leela_options"][key]))
+
 	event_stream = requests.get("https://lichess.org/api/stream/event", headers = headers, stream = True)
 
 	for line in event_stream.iter_lines():
@@ -117,20 +126,25 @@ def handle_challenge(challenge):
 
 		with active_game_MUTEX:
 			if active_game:
+				log("But I'm in a game!")
 				accepting = False
 
 		# Variants...
 
 		if challenge["variant"]["key"] != "standard":
+			log("But it's a variant!")
 			accepting = False
 
 		# Time control...
 
 		if challenge["timeControl"]["type"] != "clock":
+			log("But it's lacking a time control!")
 			accepting = False
 		elif challenge["timeControl"]["limit"] < 60 or challenge["timeControl"]["limit"] > 300:
+			log("But I don't like the time control!")
 			accepting = False
 		elif challenge["timeControl"]["increment"] < 1 or challenge["timeControl"]["increment"] > 10:
+			log("But I don't like the time control!")
 			accepting = False
 
 		if not accepting:
@@ -163,6 +177,9 @@ def accept(challengeId):
 			log("accept API returned {}".format(r.status_code))
 
 def abort_game(gameId):
+
+	global active_game
+	global active_game_MUTEX
 
 	log("Aborting game {}".format(gameId))
 
@@ -203,6 +220,9 @@ def start_game(gameId):
 def runner(gameId):
 
 	# So this will be its own thread, and handles the core game logic.
+
+	global active_game
+	global active_game_MUTEX
 
 	lz.send("ucinewgame")
 	sf.send("ucinewgame")
