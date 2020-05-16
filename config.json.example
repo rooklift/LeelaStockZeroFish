@@ -14,6 +14,7 @@
 
 	"stockfish_options": {
 		"Hash": 4096,
-		"Threads": 4
+		"Threads": 4,
+		"Contempt": 0
 	}
 }
