@@ -346,9 +346,9 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 					mate_index = tokens.index("mate") + 1
 					mate_in = int(tokens[mate_index])
 					if mate_in > 0:
-						lz_score = 100000 - (mate_in * 1000)
+						lz_score = 1000000 - (mate_in * 1000)
 					else:
-						lz_score = -100000 + (-mate_in * 1000)
+						lz_score = -1000000 + (-mate_in * 1000)
 				elif "bestmove" in msg:
 					lz_move = tokens[1]
 					break
@@ -370,9 +370,9 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 					mate_index = tokens.index("mate") + 1
 					mate_in = int(tokens[mate_index])
 					if mate_in > 0:
-						sf_score = 100000 - (mate_in * 1000)
+						sf_score = 1000000 - (mate_in * 1000)
 					else:
-						sf_score = -100000 + (-mate_in * 1000)
+						sf_score = -1000000 + (-mate_in * 1000)
 				elif "bestmove" in msg:
 					sf_move = tokens[1]
 					break
