@@ -25,7 +25,7 @@ class Engine():
 		b = bytes(msg + "\n", encoding = "ascii")
 		self.process.stdin.write(b)
 		self.process.stdin.flush()
-		# log(self.shortname + " <-- " + msg)
+		log(self.shortname + " <-- " + msg)
 
 class Game():
 
@@ -292,11 +292,8 @@ def handle_state(state, gameId, gameFull, colour):
 
 	# Crude latency compensation...
 
-	if colour == "white" and state["wtime"] < 5000:
-		state["wtime"] //= 2
-
-	if colour == "black" and state["btime"] < 5000:
-		state["btime"] //= 2
+	state["wtime"] = max(state["wtime"] - 5000, 1000)
+	state["btime"] = max(state["btime"] - 5000, 1000)
 
 	mymove = genmove(gameFull["initialFen"], state["moves"], state["wtime"], state["btime"], state["winc"], state["binc"])
 
