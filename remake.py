@@ -288,7 +288,7 @@ def handle_state(state, gameId, gameFull, colour):
 		return
 
 	if len(moves) > 0:
-		log("{}".format(moves[-1]))
+		log("           {}".format(moves[-1]))
 
 	# Crude latency compensation...
 
