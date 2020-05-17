@@ -300,6 +300,9 @@ def runner(gameId):
 
 def handle_state(state, gameId, gameFull, colour):
 
+	if state["status"] == "resign":
+		return
+
 	if gameFull is None or colour is None:
 		log("ERROR: handle_state() called without full info available")
 		abort(gameId)
