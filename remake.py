@@ -1,8 +1,10 @@
-import json, queue, subprocess, sys, threading, time
+import json, queue, random, subprocess, sys, threading, time
 import requests
 
 lz = None
 sf = None
+book = None
+config = None
 headers = None
 
 active_game = None
@@ -67,19 +69,19 @@ def log(msg):
 		except:
 			print("log() got unprintable msg...")
 
-def load_config():
+def load_json(filename):
 
 	try:
-		with open("config.json") as config_file:
-			config = json.load(config_file)
+		with open(filename) as infile:
+			ret = json.load(infile)
 	except FileNotFoundError:
-		print("Couldn't load config.json")
+		print("Couldn't load {}".format(filename))
 		sys.exit()
 	except json.decoder.JSONDecodeError:
-		print("config.json seems to be illegal JSON")
+		print("{} seems to be illegal JSON".format(filename))
 		sys.exit()
 
-	return config
+	return ret
 
 def main():
 
@@ -94,12 +96,14 @@ def main():
 
 def app():
 
+	global book
 	global config
 	global headers
 	global lz
 	global sf
 
-	config = load_config()
+	book = load_json("book.json")
+	config = load_json("config.json")
 	headers = {"Authorization": "Bearer {}".format(config["token"])}
 	lz = Engine(config["leela_command"], "LZ")
 	sf = Engine(config["stockfish_command"], "SF")
@@ -320,6 +324,12 @@ def handle_state(state, gameId, gameFull, colour):
 
 def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 
+	if initial_fen == "startpos":
+		mv = book_move(moves_string)
+		if mv:
+			log("     Book: {}".format(mv))
+			return mv
+
 	lz.send("position {} moves {}".format(initial_fen, moves_string))
 	lz.send("go wtime {} btime {} winc {} binc {}".format(wtime, btime, winc, binc))
 	sf.send("position {} moves {}".format(initial_fen, moves_string))
@@ -394,6 +404,19 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 
 	log("      Lc0: {} ({})".format(lz_move, lz_score))
 	return lz_move
+
+def book_move(moves_string):
+
+	candidate_lines = []
+
+	for line in book:
+		if line.startswith(moves_string) and len(line) > len(moves_string):
+			candidate_lines.append(line)
+
+	if len(candidate_lines) == 0:
+		return None
+
+	return random.choice(candidate_lines).split()[len(moves_string.split())]
 
 # ---------------------------------------------------------------------------------------------------------
 
