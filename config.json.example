@@ -2,6 +2,7 @@
 	"account": "BotAccountName",
 	"token": "xxxxxxxxxxxxxxxx",
 	"veto_cp": 75,
+	"takeover_cp": 500,
 
 	"leela_command": "C:\\Programs (self-installed)\\lc0-cudnn git\\lc0.exe",
 

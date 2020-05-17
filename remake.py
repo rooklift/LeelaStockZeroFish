@@ -390,15 +390,12 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 		except queue.Empty:
 			pass
 
-	# If SF's score is way better than LZ's then go with its move. Note that there's
-	# no blunder checking, i.e SF is not asked its opinion on LZ's move.
-
 	if lz_move == sf_move:
 		log("   Agreed: {} ({}/{})".format(lz_move, lz_score, sf_score))
 		return lz_move
 
 	if lz_score is not None and sf_score is not None:
-		if sf_score > lz_score + config["veto_cp"]:
+		if sf_score > lz_score + config["veto_cp"] or sf_score > config["takeover_cp"]:
 			log("Stockfish: {} ({})".format(sf_move, sf_score))
 			return sf_move
 
