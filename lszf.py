@@ -149,7 +149,7 @@ def handle_challenge(challenge):
 
 		# Variants...
 
-		if challenge["variant"]["key"] != "standard":
+		if challenge["variant"]["key"] != "standard" and challenge["variant"]["key"] != "chess960":
 			log("But it's a variant!")
 			accepting = False
 
@@ -263,9 +263,16 @@ def runner(gameId):
 		dec = line.decode("utf-8")
 		j = json.loads(dec)
 
-		if j["type"] == "gameFull":
+		if j["type"] == "gameFull":		# This should be the first thing we get.
 
 			gameFull = j
+
+			if j["variant"]["key"] == "chess960":
+				lz.send("setoption name UCI_Chess960 value true")
+				sf.send("setoption name UCI_Chess960 value true")
+			else:
+				lz.send("setoption name UCI_Chess960 value false")
+				sf.send("setoption name UCI_Chess960 value false")
 
 			try:
 				if j["white"]["name"].lower() == config["account"].lower():
@@ -330,9 +337,14 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 			log("     Book: {}".format(mv))
 			return mv
 
-	lz.send("position {} moves {}".format(initial_fen, moves_string))
+	if initial_fen == "startpos":
+		pos_string = "startpos"
+	else:
+		pos_string = "fen " + initial_fen
+
+	lz.send("position {} moves {}".format(pos_string, moves_string))
 	lz.send("go wtime {} btime {} winc {} binc {}".format(wtime, btime, winc, binc))
-	sf.send("position {} moves {}".format(initial_fen, moves_string))
+	sf.send("position {} moves {}".format(pos_string, moves_string))
 	sf.send("go wtime {} btime {} winc {} binc {}".format(wtime, btime, winc, binc))
 
 	lz_score = None
