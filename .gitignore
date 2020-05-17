@@ -4,4 +4,4 @@
 leelaz_opencl_tuning
 network
 *.txt
-*.json
+config.json
