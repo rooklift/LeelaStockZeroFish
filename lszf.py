@@ -300,7 +300,7 @@ def runner(gameId):
 
 def handle_state(state, gameId, gameFull, colour):
 
-	if state["status"] == "resign":
+	if state["status"] != "started":
 		return
 
 	if gameFull is None or colour is None:
