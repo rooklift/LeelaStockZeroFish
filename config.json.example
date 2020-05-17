@@ -7,14 +7,17 @@
 
 	"leela_options": {
 		"WeightsFile": "C:\\Users\\Owner\\Documents\\Misc\\Chess\\Lc0 Networks\\63409",
+		"SyzygyPath": "C:\\Users\\Owner\\Documents\\Misc\\Chess\\Syzygy",
 		"MoveOverheadMs": 0
 	},
 
 	"stockfish_command": "C:\\Programs (self-installed)\\Chess Engines\\stockfish.exe",
 
 	"stockfish_options": {
+		"SyzygyPath": "C:\\Users\\Owner\\Documents\\Misc\\Chess\\Syzygy",
 		"Hash": 4096,
 		"Threads": 4,
-		"Contempt": 0
+		"Contempt": 0,
+		"Move Overhead": 0
 	}
 }
