@@ -268,9 +268,11 @@ def runner(gameId):
 			gameFull = j
 
 			if j["variant"]["key"] == "chess960":
+				log("setoption name UCI_Chess960 value true")
 				lz.send("setoption name UCI_Chess960 value true")
 				sf.send("setoption name UCI_Chess960 value true")
 			else:
+				log("setoption name UCI_Chess960 value false")
 				lz.send("setoption name UCI_Chess960 value false")
 				sf.send("setoption name UCI_Chess960 value false")
 
