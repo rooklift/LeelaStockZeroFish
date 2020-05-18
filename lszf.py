@@ -29,15 +29,6 @@ class Engine():
 		self.process.stdin.flush()
 		# log(self.shortname + " <-- " + msg)
 
-class Game():
-
-	def __init__(self, gameId):
-
-		self.gameId = gameId
-		self.gameFull = None
-		self.colour = None
-		self.events = requests.get("https://lichess.org/api/bot/game/stream/{}".format(gameId), headers = headers, stream = True)
-
 # ---------------------------------------------------------------------------------------------------------------------------------
 
 def engine_stdout_watcher(engine):
@@ -71,19 +62,40 @@ def log(msg):
 
 def load_json(filename):
 
+	with open(filename) as infile:
+		ret = json.load(infile)
+		return ret
+
+def load_configs():
+
+	global book
+	global config
+	global headers
+
 	try:
-		with open(filename) as infile:
-			ret = json.load(infile)
+		book = load_json(BOOK_FILE)
 	except FileNotFoundError:
-		print("Couldn't load {}".format(filename))
-		sys.exit()
+		print("Couldn't load {}".format(BOOK_FILE))
+		book = []
 	except json.decoder.JSONDecodeError:
-		print("{} seems to be illegal JSON".format(filename))
+		print("{} seems to be illegal JSON".format(BOOK_FILE))
+		book = []
+
+	try:
+		config = load_json(CONFIG_FILE)
+	except FileNotFoundError:
+		print("Couldn't load {}".format(CONFIG_FILE))
+		sys.exit()
+		
+	except json.decoder.JSONDecodeError:
+		print("{} seems to be illegal JSON".format(CONFIG_FILE))
 		sys.exit()
 
-	return ret
+	headers = {"Authorization": "Bearer {}".format(config["token"])}
 
 def main():
+
+	load_configs()
 
 	threading.Thread(target = app, daemon = True).start()
 
@@ -96,15 +108,9 @@ def main():
 
 def app():
 
-	global book
-	global config
-	global headers
 	global lz
 	global sf
 
-	book = load_json("book.json")
-	config = load_json("config.json")
-	headers = {"Authorization": "Bearer {}".format(config["token"])}
 	lz = Engine(config["leela_command"], "LZ")
 	sf = Engine(config["stockfish_command"], "SF")
 
@@ -165,10 +171,10 @@ def handle_challenge(challenge):
 			log("But I don't like the time control!")
 			accepting = False
 
-		if not accepting:
-			decline(challenge["id"])
-		else:
+		if accepting:
 			accept(challenge["id"])
+		else:
+			decline(challenge["id"])
 
 	except Exception as err:
 		log("Exception in handle_challenge(): {}".format(repr(err)))
@@ -339,7 +345,6 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 	if initial_fen == "startpos":
 		mv = book_move(moves_string)
 		if mv:
-			log("     Book: {}".format(mv))
 			return mv
 
 	if initial_fen == "startpos":
@@ -423,16 +428,29 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 
 def book_move(moves_string):
 
-	candidate_lines = []
+	mslen = len(moves_string.split())
+
+	candidate_moves = set()
 
 	for line in book:
 		if line.startswith(moves_string) and len(line) > len(moves_string):
-			candidate_lines.append(line)
+			try:
+				candidate_moves.add(line.split()[mslen])
+			except:
+				pass	# Some extra whitespace in the string?
 
-	if len(candidate_lines) == 0:
+	if len(candidate_moves) == 0:
 		return None
 
-	return random.choice(candidate_lines).split()[len(moves_string.split())]
+	ret = random.choice(list(candidate_moves))
+
+	alts = []
+	for mv in candidate_moves:
+		if mv != ret:
+			alts.append(mv)
+
+	log("     Book: {} {}".format(ret, alts))
+	return ret
 
 # ---------------------------------------------------------------------------------------------------------
 
