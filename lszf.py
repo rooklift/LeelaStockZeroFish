@@ -1,6 +1,9 @@
 import json, queue, random, subprocess, sys, threading, time
 import requests
 
+BOOK_FILE = "book.json"
+CONFIG_FILE = "config.json"
+
 lz = None
 sf = None
 book = None
@@ -51,6 +54,7 @@ def engine_stderr_watcher(engine):
 		# log(engine.shortname + " (e) " + msg)
 
 def log(msg):
+
 	if isinstance(msg, str):
 		if msg.rstrip():
 			print(msg.rstrip())
@@ -159,6 +163,15 @@ def handle_challenge(challenge):
 			log("But it's a variant!")
 			accepting = False
 
+		# Not whitelisted...
+
+		try:
+			if len(config["whitelist"]) > 0 and challenge["challenger"]["name"] not in config["whitelist"]:
+				log("But challenger is not whitelisted!")
+				accepting = False
+		except:
+			pass			# No whitelist exists
+
 		# Time control...
 
 		if challenge["timeControl"]["type"] != "clock":
@@ -232,12 +245,13 @@ def start_game(gameId):
 			active_game = gameId
 
 	if autoabort:	# Don't do this inside the above "with", as abort() also uses the mutex.
-		log("WARNING: game started but I seem to be in a game")
+		log("WARNING: game starting but I seem to be in a game")
 		abort_game(gameId)
 		return
 
+	log("Game {} starting.".format(gameId))
+
 	threading.Thread(target = runner, args = (gameId, ), daemon = True).start()
-	log("Game {} started".format(gameId))
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -282,21 +296,16 @@ def runner(gameId):
 				lz.send("setoption name UCI_Chess960 value false")
 				sf.send("setoption name UCI_Chess960 value false")
 
-			try:
-				if j["white"]["name"].lower() == config["account"].lower():
-					colour = "white"
-			except:
-				pass
+			if j["white"]["name"].lower() == config["account"].lower():
+				colour = "white"
 
-			try:
-				if j["black"]["name"].lower() == config["account"].lower():
-					colour = "black"
-			except:
-				pass
+			if j["black"]["name"].lower() == config["account"].lower():
+				colour = "black"
 
 			handle_state(j["state"], gameId, gameFull, colour)
 
 		elif j["type"] == "gameState":
+
 			handle_state(j, gameId, gameFull, colour)
 
 	log("Game stream closed...")
