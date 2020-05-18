@@ -225,7 +225,7 @@ def start_game(gameId):
 		else:
 			active_game = gameId
 
-	if autoabort:
+	if autoabort:	# Don't do this inside the above "with", as abort() also uses the mutex.
 		log("WARNING: game started but I seem to be in a game")
 		abort_game(gameId)
 		return
