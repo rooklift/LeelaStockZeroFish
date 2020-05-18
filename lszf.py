@@ -407,6 +407,8 @@ def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 		except queue.Empty:
 			pass
 
+		time.sleep(0.01)		# Avoid the pure spinlock
+
 	if lz_move == sf_move:
 		log("   Agreed: {} ({}/{})".format(lz_move, lz_score, sf_score))
 		return lz_move
