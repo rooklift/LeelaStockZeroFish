@@ -1,8 +1,10 @@
-import json, queue, random, subprocess, sys, threading, time
+import json, os.path, pprint, queue, random, subprocess, sys, threading, time
 import requests
 
 BOOK_FILE = "book.json"
 CONFIG_FILE = "config.json"
+
+pp = pprint.PrettyPrinter(indent = 4)
 
 lz = None
 sf = None
@@ -58,11 +60,24 @@ def log(msg):
 	if isinstance(msg, str):
 		if msg.rstrip():
 			print(msg.rstrip())
+	elif isinstance(msg, dict):
+		pp.pprint(msg)
 	else:
 		try:
 			print(repr(msg))
 		except:
-			print("log() got unprintable msg...")
+			print("log() got unprintable msg")
+
+def simple_post(url):
+
+	r = requests.post(url, headers = headers)
+
+	if r.status_code != 200:
+		log("Upon contacting {}:".format(url))
+		try:
+			log(r.json())
+		except:
+			log("API returned {}".format(r.status_code))
 
 def load_json(filename):
 
@@ -90,7 +105,7 @@ def load_configs():
 	except FileNotFoundError:
 		print("Couldn't load {}".format(CONFIG_FILE))
 		sys.exit()
-		
+
 	except json.decoder.JSONDecodeError:
 		print("{} seems to be illegal JSON".format(CONFIG_FILE))
 		sys.exit()
@@ -121,11 +136,11 @@ def app():
 	lz.send("uci")
 	sf.send("uci")
 
-	for key in config["stockfish_options"]:
-		sf.send("setoption name {} value {}".format(key, config["stockfish_options"][key]))
-
 	for key in config["leela_options"]:
 		lz.send("setoption name {} value {}".format(key, config["leela_options"][key]))
+
+	for key in config["stockfish_options"]:
+		sf.send("setoption name {} value {}".format(key, config["stockfish_options"][key]))
 
 	event_stream = requests.get("https://lichess.org/api/stream/event", headers = headers, stream = True)
 
@@ -140,13 +155,19 @@ def app():
 
 def handle_challenge(challenge):
 
+	global config
 	global active_game
 	global active_game_MUTEX
 
 	try:
 
+		# Reload the config for live adjustments...
+		try:
+			config = load_json(CONFIG_FILE)
+		except:
+			log("Reloading {} failed!".format(CONFIG_FILE))
+
 		log("Incoming challenge from {} (rated: {})".format(challenge["challenger"]["name"], challenge["rated"]))
-		log("TC is {}".format(challenge["timeControl"]["show"]))
 
 		accepting = True
 
@@ -177,11 +198,11 @@ def handle_challenge(challenge):
 		if challenge["timeControl"]["type"] != "clock":
 			log("But it's lacking a time control!")
 			accepting = False
-		elif challenge["timeControl"]["limit"] < 60 or challenge["timeControl"]["limit"] > 300:
-			log("But I don't like the time control!")
+		elif challenge["timeControl"]["limit"] < config["min_tc_secs"] or challenge["timeControl"]["limit"] > config["max_tc_secs"]:
+			log("But I don't like the time control! ({}+{})".format(challenge["timeControl"]["limit"], challenge["timeControl"]["increment"]))
 			accepting = False
-		elif challenge["timeControl"]["increment"] < 1 or challenge["timeControl"]["increment"] > 10:
-			log("But I don't like the time control!")
+		elif challenge["timeControl"]["increment"] < config["min_inc_secs"] or challenge["timeControl"]["increment"] > config["max_inc_secs"]:
+			log("But I don't like the time control! ({}+{})".format(challenge["timeControl"]["limit"], challenge["timeControl"]["increment"]))
 			accepting = False
 
 		if accepting:
@@ -196,22 +217,12 @@ def handle_challenge(challenge):
 def decline(challengeId):
 
 	log("Declining challenge {}".format(challengeId))
-	r = requests.post("https://lichess.org/api/challenge/{}/decline".format(challengeId), headers = headers)
-	if r.status_code != 200:
-		try:
-			log(r.json())
-		except:
-			log("decline API returned {}".format(r.status_code))
+	simple_post("https://lichess.org/api/challenge/{}/decline".format(challengeId))
 
 def accept(challengeId):
 
 	log("Accepting challenge {}".format(challengeId))
-	r = requests.post("https://lichess.org/api/challenge/{}/accept".format(challengeId), headers = headers)
-	if r.status_code != 200:
-		try:
-			log(r.json())
-		except:
-			log("accept API returned {}".format(r.status_code))
+	simple_post("https://lichess.org/api/challenge/{}/accept".format(challengeId))
 
 def abort_game(gameId):
 
@@ -219,13 +230,7 @@ def abort_game(gameId):
 	global active_game_MUTEX
 
 	log("Aborting game {}".format(gameId))
-
-	r = requests.post("https://lichess.org/api/bot/game/{}/abort".format(gameId), headers = headers)
-	if r.status_code != 200:
-		try:
-			log(r.json())
-		except:
-			log("abort API returned {}".format(r.status_code))
+	simple_post("https://lichess.org/api/bot/game/{}/abort".format(gameId))
 
 	with active_game_MUTEX:
 		if active_game == gameId:
@@ -342,12 +347,7 @@ def handle_state(state, gameId, gameFull, colour):
 
 	mymove = genmove(gameFull["initialFen"], state["moves"], state["wtime"], state["btime"], state["winc"], state["binc"])
 
-	r = requests.post("https://lichess.org/api/bot/game/{}/move/{}".format(gameId, mymove) , headers = headers)
-	if r.status_code != 200:
-		try:
-			log(r.json())
-		except:
-			log("move API returned {}".format(r.status_code))
+	simple_post("https://lichess.org/api/bot/game/{}/move/{}".format(gameId, mymove))
 
 def genmove(initial_fen, moves_string, wtime, btime, winc, binc):
 

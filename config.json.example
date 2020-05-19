@@ -1,8 +1,14 @@
 {
 	"account": "BotAccountName",
 	"token": "xxxxxxxxxxxxxxxx",
+	
 	"veto_cp": 75,
 	"takeover_cp": 500,
+
+	"min_tc_secs": 60,
+	"max_tc_secs": 300,
+	"min_inc_secs": 0,
+	"max_inc_secs": 5,
 
 	"leela_command": "C:\\Programs (self-installed)\\lc0-cudnn git\\lc0.exe",
 
@@ -17,7 +23,7 @@
 	"stockfish_options": {
 		"SyzygyPath": "C:\\Users\\Owner\\Documents\\Misc\\Chess\\Syzygy",
 		"Hash": 4096,
-		"Threads": 4,
+		"Threads": 3,
 		"Contempt": 0,
 		"Move Overhead": 0
 	}
