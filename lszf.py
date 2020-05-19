@@ -342,8 +342,8 @@ def handle_state(state, gameId, gameFull, colour):
 
 	# Crude latency compensation...
 
-	state["wtime"] = max(state["wtime"] - 5000, 800)
-	state["btime"] = max(state["btime"] - 5000, 800)
+	state["wtime"] = max(state["wtime"] - 10000, 500)
+	state["btime"] = max(state["btime"] - 10000, 500)
 
 	mymove = genmove(gameFull["initialFen"], state["moves"], state["wtime"], state["btime"], state["winc"], state["binc"])
 
