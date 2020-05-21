@@ -335,6 +335,7 @@ def handle_state(state, gameId, gameFull, colour):
 	if gameFull is None or colour is None:
 		log("ERROR: handle_state() called without full info available")
 		abort(gameId)
+		return
 
 	moves = []
 
