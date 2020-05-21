@@ -105,12 +105,14 @@ def load_configs():
 	except FileNotFoundError:
 		print("Couldn't load {}".format(CONFIG_FILE))
 		sys.exit()
-
 	except json.decoder.JSONDecodeError:
 		print("{} seems to be illegal JSON".format(CONFIG_FILE))
 		sys.exit()
 
 	headers = {"Authorization": "Bearer {}".format(config["token"])}
+
+	config.setdefault("whitelist", [])
+	config.setdefault("open", True)
 
 def main():
 
@@ -155,17 +157,12 @@ def app():
 
 def handle_challenge(challenge):
 
-	global config
 	global active_game
 	global active_game_MUTEX
 
 	try:
 
-		# Reload the config for live adjustments...
-		try:
-			config = load_json(CONFIG_FILE)
-		except:
-			log("Reloading {} failed!".format(CONFIG_FILE))
+		load_configs()		# For live adjustments
 
 		log("Incoming challenge from {} (rated: {})".format(challenge["challenger"]["name"], challenge["rated"]))
 
@@ -178,6 +175,12 @@ def handle_challenge(challenge):
 				log("But I'm in a game!")
 				accepting = False
 
+		# Not open...
+
+		if not config["open"]:
+			log("But I'm not open to challenges!")
+			accepting = False
+
 		# Variants...
 
 		if challenge["variant"]["key"] != "standard" and challenge["variant"]["key"] != "chess960":
@@ -186,12 +189,9 @@ def handle_challenge(challenge):
 
 		# Not whitelisted...
 
-		try:
-			if len(config["whitelist"]) > 0 and challenge["challenger"]["name"] not in config["whitelist"]:
-				log("But challenger is not whitelisted!")
-				accepting = False
-		except:
-			pass			# No whitelist exists
+		if isinstance(config["whitelist"], list) and len(config["whitelist"]) > 0 and challenge["challenger"]["name"] not in config["whitelist"]:
+			log("But challenger is not whitelisted!")
+			accepting = False
 
 		# Time control...
 
@@ -253,6 +253,8 @@ def start_game(gameId):
 		log("WARNING: game starting but I seem to be in a game")
 		abort_game(gameId)
 		return
+
+	load_configs()		# For live adjustments
 
 	log("Game {} starting.".format(gameId))
 
