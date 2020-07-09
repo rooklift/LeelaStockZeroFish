@@ -142,6 +142,8 @@ def app():
 	for key in config["leela_options"]:
 		lz.send("setoption name {} value {}".format(key, config["leela_options"][key]))
 
+	lz.send("ucinewgame")	# Causes Leela to actually load its network.
+
 	for key in config["stockfish_options"]:
 		sf.send("setoption name {} value {}".format(key, config["stockfish_options"][key]))
 
